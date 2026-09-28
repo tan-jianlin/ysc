@@ -9,6 +9,7 @@
 """
 import json
 import os
+import subprocess
 import urllib.request
 import datetime
 
@@ -155,6 +156,24 @@ def load_config():
         return {"storeName": "本地聚合", "urls": []}
 
 
+def push_to_gitee():
+    """将更新后的 config / status 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
+    try:
+        steps = [
+            ['git', '-C', BASE_DIR, 'add', 'config', 'status.json'],
+            ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
+            ['git', '-C', BASE_DIR, 'push', 'origin', 'master'],
+        ]
+        for c in steps:
+            r = subprocess.run(c, capture_output=True, text=True, timeout=90)
+            log("  git %s -> 退出码 %d" % (c[2], r.returncode))
+        log("已同步到 Gitee 线上")
+        return True
+    except Exception as e:
+        log("推送线上失败（电脑网络或登录态问题，本地配置已更新）: %s" % e)
+        return False
+
+
 def main():
     log("===== 开始自动查找与验证影视源 =====")
     today = datetime.date.today().isoformat()
@@ -213,6 +232,7 @@ def main():
 
     ok_count = len([u for u, r in status.items() if r.get("status") == "ok"])
     log("更新完成：config 保留 %d 个源，其中当前可用 %d 个" % (len(new_urls), ok_count))
+    push_to_gitee()
     log("===== 结束 =====")
 
 
