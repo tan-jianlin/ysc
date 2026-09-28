@@ -11,7 +11,7 @@
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://api.hgyx.vip/hgyx.json": {
     "name": "HGYX影视",
@@ -158,7 +158,7 @@
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "http://影视仓.com/": {
     "name": "影视仓com",
@@ -172,14 +172,14 @@
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://9280.kstore.space/wex.json": {
     "name": "王二小备用",
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://6758.kstore.space/1.json": {
     "name": "青龙",
@@ -193,28 +193,28 @@
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json": {
     "name": "饭太硬fty",
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json": {
     "name": "潇洒",
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json": {
     "name": "高天流云",
     "last_ok": "2026-09-28",
     "fail_days": 0,
     "status": "ok",
-    "note": "单仓OK(站点抽查0/3) 站点全失效"
+    "note": "单仓OK"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json": {
     "name": "香雅情",
