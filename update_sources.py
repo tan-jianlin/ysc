@@ -24,7 +24,6 @@ DOWNLOAD_LIMIT = 512 * 1024  # 单源下载上限 512KB
 
 # 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充
 CANDIDATES = [
-    ("YSC全量源", "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json"),
     ("小马源", "https://szyyds.cn/tv/x.json"),
     ("HGYX影视", "https://api.hgyx.vip/hgyx.json"),
     ("聚玩盒子4K", "http://xhztv.top/4k.json"),
@@ -42,7 +41,6 @@ CANDIDATES = [
     ("VOX源", "http://rihou.cc:88/demo.php"),
     ("凯速源", "https://6800.kstore.vip/fish.json"),
     ("pandown源", "http://pandown.pro/tvbox/tvbox.json"),
-    ("俊哥源", "http://home.jundie.top:81/top98.json"),
     ("4K云盘源", "https://9xi4o.tk/0725.json"),
     ("毒盒多仓", "https://tv.youdu.fan:666"),
     ("运输车辆", "https://weixine.net/api.json"),
