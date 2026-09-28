@@ -22,28 +22,35 @@ MAX_FAIL_DAYS = 3            # 连续失败天数阈值，达到后自动剔除
 MAX_SOURCES = 15             # config 中最多保留的源数量
 DOWNLOAD_LIMIT = 512 * 1024  # 单源下载上限 512KB
 
+# 电视实测不可用黑名单（家庭网络无法访问/影视仓解析失败），即使电脑验证通过也不加入 config
+BLOCKLIST = [
+    "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json",
+    "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json",
+    "http://ztha.top/TVBox/GYCK.json",
+    "http://home.jundie.top:81/top98.json",
+    "http://xmbjm.fh4u.org/dc.txt",
+    "http://xhztv.top/dc",
+]
+
+# 站点级抽查：验证通过后抽查源内部前 N 个站点，防止"文件在但内容全失效"
+SITE_CHECK_N = 3
+
 # 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充
 CANDIDATES = [
     ("小马源", "https://szyyds.cn/tv/x.json"),
     ("HGYX影视", "https://api.hgyx.vip/hgyx.json"),
     ("聚玩盒子4K", "http://xhztv.top/4k.json"),
-    ("拾光多仓", "http://xmbjm.fh4u.org/dc.txt"),
-    ("挺好分享", "http://ztha.top/TVBox/GYCK.json"),
-    ("月光宝盒", "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json"),
-    ("小盒子多仓", "http://xhztv.top/dc"),
-    ("小盒子单仓", "http://xhztv.top/xhz"),
-    ("猫技多仓", "https://agit.ai/ddx/TVBox/raw/branch/master/d.json"),
-    ("影视仓多仓", "https://gitlab.com/ygbh1/666/-/raw/main/dcang/ygbh.json"),
-    ("运输车源", "https://tvkj.top/DC/ysc/tvkj/svip.json"),
-    ("香雅情源", "https://github.moeyy.xyz/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json"),
-    ("饭太硬源", "http://www.饭太硬.com/tv"),
-    ("嗷呜源", "http://itv666.cc/aowu/config.webp"),
-    ("VOX源", "http://rihou.cc:88/demo.php"),
-    ("凯速源", "https://6800.kstore.vip/fish.json"),
-    ("pandown源", "http://pandown.pro/tvbox/tvbox.json"),
-    ("4K云盘源", "https://9xi4o.tk/0725.json"),
-    ("毒盒多仓", "https://tv.youdu.fan:666"),
-    ("运输车辆", "https://weixine.net/api.json"),
+    ("动漫专属", "https://www.yingm.cc/dm/dm.json"),
+    ("影视仓com", "http://影视仓.com/"),
+    ("王二小", "http://tvbox.王二小放牛娃.top"),
+    ("王二小备用", "https://9280.kstore.space/wex.json"),
+    ("青龙", "https://6758.kstore.space/1.json"),
+    # GitHub 大而全源（经 gh-proxy.com 国内加速，含点播/直播/解析）
+    ("jsm大而全", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json"),
+    ("饭太硬fty", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json"),
+    ("潇洒", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json"),
+    ("高天流云", "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"),
+    ("香雅情", "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json"),
 ]
 
 
@@ -128,6 +135,62 @@ def validate(content):
     return False, "不是TVBox配置结构"
 
 
+def site_spot_check(content):
+    """站点级抽查：取配置内前 N 个站点 API，能收到任何 HTTP 响应即视为可达（仅提醒，不参与剔除）"""
+    if not content:
+        return 0, 0
+    try:
+        text = content.lstrip('\ufeff').strip()
+        j = json.loads(text)
+    except Exception:
+        return 0, 0
+    if not isinstance(j, dict):
+        return 0, 0
+    sites = j.get("sites")
+    if not isinstance(sites, list) or len(sites) == 0:
+        return 0, 0
+    urls = []
+    for s in sites[:SITE_CHECK_N]:
+        if isinstance(s, dict):
+            u = s.get("api") or s.get("url")
+            if u and isinstance(u, str) and u.startswith(("http://", "https://")):
+                urls.append(u)
+    if not urls:
+        return 0, 0
+    ok = 0
+    for u in urls:
+        try:
+            u2 = idna_url(u)
+            req = urllib.request.Request(u2, headers={'User-Agent': 'okhttp/3.12.1', 'Accept-Encoding': 'identity'})
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                ok += 1  # 任何 HTTP 响应都算站点可达
+        except urllib.error.HTTPError:
+            ok += 1  # 4xx/5xx 也算可达（源站有响应，多为防盗链）
+        except Exception:
+            pass  # 网络级失败（超时/拒绝/DNS）才算不可达
+    return ok, len(urls)
+
+
+def notify_change(msg):
+    """Windows 桌面通知（源有新增/剔除/大面积失效时提醒用户）"""
+    try:
+        import subprocess
+        ps = (
+            "Add-Type -AssemblyName System.Windows.Forms;"
+            "$n=New-Object System.Windows.Forms.NotifyIcon;"
+            "$n.Icon=[System.Drawing.SystemIcons]::Information;"
+            "$n.Visible=$true;"
+            "$n.BalloonTipTitle='影视源自动更新';"
+            "$n.BalloonTipText='%s';"
+            "$n.ShowBalloonTip(10000);"
+            "Start-Sleep 12;$n.Dispose()" % msg.replace("'", "''")
+        )
+        subprocess.run(['powershell', '-NoProfile', '-Command', ps], timeout=20)
+        log("已发送桌面通知")
+    except Exception as e:
+        log("桌面通知发送失败: %s" % e)
+
+
 def load_status():
     if os.path.exists(STATUS_PATH):
         try:
@@ -155,10 +218,10 @@ def load_config():
 
 
 def push_to_gitee():
-    """将更新后的 config / status 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
+    """将更新后的 config / config_kids / status 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
     try:
         steps = [
-            ['git', '-C', BASE_DIR, 'add', 'config', 'status.json'],
+            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
             ['git', '-C', BASE_DIR, 'push', 'origin', 'master'],
         ]
@@ -189,18 +252,34 @@ def main():
             existing[url] = (name, False)
 
     keep = []  # (name, url)：写入 config
+    old_urls = set(u for u, (n, ex) in existing.items() if ex)  # 更新前 config 里的源
+    removed = []
+    added = []
     for url, (name, is_existing) in existing.items():
+        if url in BLOCKLIST:
+            log("跳过电视黑名单源 %s (%s)" % (name, url))
+            if is_existing:
+                removed.append(name)
+            continue
         log("验证 %s (%s)" % (name, url))
         content = fetch(url)
         ok, note = validate(content)
         rec = status.setdefault(url, {"name": name, "last_ok": None, "fail_days": 0})
         rec["name"] = name
         if ok:
+            # 站点级抽查：仅记录提醒，不参与可用性判定（防止误伤正常源）
+            s_ok, s_total = site_spot_check(content)
+            if s_total > 0:
+                note = "%s(站点抽查%d/%d)" % (note, s_ok, s_total)
+                if s_ok == 0:
+                    note += " ⚠️站点不可达提醒"
             rec["fail_days"] = 0
             rec["last_ok"] = today
             rec["status"] = "ok"
             rec["note"] = note
             keep.append((name, url))
+            if not is_existing:
+                added.append(name)
         else:
             rec["fail_days"] = rec.get("fail_days", 0) + 1
             rec["status"] = "fail"
@@ -211,6 +290,8 @@ def main():
                 keep.append((name, url))  # 曾可用，未达阈值先保留
             else:
                 log("  %s 连续%d天失效，已剔除" % (name, MAX_FAIL_DAYS))
+                if is_existing:
+                    removed.append(name)
         log("  -> %s" % note)
 
     # 写回 config（只保留验证通过或曾可用未达阈值的源，控制上限）
@@ -230,6 +311,17 @@ def main():
 
     ok_count = len([u for u, r in status.items() if r.get("status") == "ok"])
     log("更新完成：config 保留 %d 个源，其中当前可用 %d 个" % (len(new_urls), ok_count))
+    # 有变化时发送桌面通知
+    if added or removed:
+        msg = ""
+        if added:
+            msg += "新增源：%s。" % "、".join(added)
+        if removed:
+            msg += "剔除失效源：%s。" % "、".join(removed)
+        msg += "当前配置 %d 个源。" % len(new_urls)
+        notify_change(msg)
+    elif ok_count >= 2 and len([u for u, r in status.items() if r.get("status") == "ok" and r.get("last_ok") == today]) < 1:
+        notify_change("今日源检测异常，请查看 update_log.txt")
     push_to_gitee()
     log("===== 结束 =====")
 
