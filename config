@@ -2,14 +2,6 @@
   "storeName": "本地聚合",
   "urls": [
     {
-      "name": "挺好分享",
-      "url": "http://ztha.top/TVBox/GYCK.json"
-    },
-    {
-      "name": "月光宝盒",
-      "url": "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json"
-    },
-    {
       "name": "小马源",
       "url": "https://szyyds.cn/tv/x.json"
     },
@@ -22,8 +14,24 @@
       "url": "http://xhztv.top/4k.json"
     },
     {
-      "name": "小盒子多仓",
-      "url": "http://xhztv.top/dc"
+      "name": "动漫专属",
+      "url": "https://www.yingm.cc/dm/dm.json"
+    },
+    {
+      "name": "影视仓com",
+      "url": "http://影视仓.com/"
+    },
+    {
+      "name": "王二小",
+      "url": "http://tvbox.王二小放牛娃.top"
+    },
+    {
+      "name": "王二小备用",
+      "url": "https://9280.kstore.space/wex.json"
+    },
+    {
+      "name": "青龙",
+      "url": "https://6758.kstore.space/1.json"
     }
   ]
 }

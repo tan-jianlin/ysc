@@ -23,9 +23,9 @@
   "http://xhztv.top/4k.json": {
     "name": "聚玩盒子4K",
     "last_ok": "2026-09-28",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK(宽松)"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "http://xmbjm.fh4u.org/dc.txt": {
     "name": "拾光多仓",
@@ -58,70 +58,70 @@
   "http://xhztv.top/xhz": {
     "name": "小盒子单仓",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "非JSON"
   },
   "https://agit.ai/ddx/TVBox/raw/branch/master/d.json": {
     "name": "猫技多仓",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "非JSON"
   },
   "https://gitlab.com/ygbh1/666/-/raw/main/dcang/ygbh.json": {
     "name": "影视仓多仓",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "https://tvkj.top/DC/ysc/tvkj/svip.json": {
     "name": "运输车源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "非JSON"
   },
   "https://github.moeyy.xyz/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json": {
     "name": "香雅情源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "http://www.饭太硬.com/tv": {
     "name": "饭太硬源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "http://itv666.cc/aowu/config.webp": {
     "name": "嗷呜源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
-    "note": "非JSON"
+    "note": "下载失败"
   },
   "http://rihou.cc:88/demo.php": {
     "name": "VOX源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "https://6800.kstore.vip/fish.json": {
     "name": "凯速源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "http://pandown.pro/tvbox/tvbox.json": {
     "name": "pandown源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
@@ -135,22 +135,57 @@
   "https://9xi4o.tk/0725.json": {
     "name": "4K云盘源",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "https://tv.youdu.fan:666": {
     "name": "毒盒多仓",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
   },
   "https://weixine.net/api.json": {
     "name": "运输车辆",
     "last_ok": null,
-    "fail_days": 4,
+    "fail_days": 5,
     "status": "fail",
     "note": "下载失败"
+  },
+  "https://www.yingm.cc/dm/dm.json": {
+    "name": "动漫专属",
+    "last_ok": "2026-09-28",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK"
+  },
+  "http://影视仓.com/": {
+    "name": "影视仓com",
+    "last_ok": "2026-09-28",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK(宽松)"
+  },
+  "http://tvbox.王二小放牛娃.top": {
+    "name": "王二小",
+    "last_ok": "2026-09-28",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK"
+  },
+  "https://9280.kstore.space/wex.json": {
+    "name": "王二小备用",
+    "last_ok": "2026-09-28",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK"
+  },
+  "https://6758.kstore.space/1.json": {
+    "name": "青龙",
+    "last_ok": "2026-09-28",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK(宽松)"
   }
 }
