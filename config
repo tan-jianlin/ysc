@@ -14,44 +14,12 @@
       "url": "http://xhztv.top/4k.json"
     },
     {
-      "name": "动漫专属",
-      "url": "https://www.yingm.cc/dm/dm.json"
-    },
-    {
-      "name": "影视仓com",
-      "url": "http://影视仓.com/"
-    },
-    {
-      "name": "王二小",
-      "url": "http://tvbox.王二小放牛娃.top"
-    },
-    {
       "name": "王二小备用",
       "url": "https://9280.kstore.space/wex.json"
     },
     {
       "name": "青龙",
       "url": "https://6758.kstore.space/1.json"
-    },
-    {
-      "name": "jsm大而全",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json"
-    },
-    {
-      "name": "饭太硬fty",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json"
-    },
-    {
-      "name": "潇洒",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json"
-    },
-    {
-      "name": "高天流云",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"
-    },
-    {
-      "name": "香雅情",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json"
     }
   ]
 }
