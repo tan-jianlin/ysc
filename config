@@ -32,6 +32,26 @@
     {
       "name": "青龙",
       "url": "https://6758.kstore.space/1.json"
+    },
+    {
+      "name": "jsm大而全",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json"
+    },
+    {
+      "name": "饭太硬fty",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json"
+    },
+    {
+      "name": "潇洒",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json"
+    },
+    {
+      "name": "高天流云",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"
+    },
+    {
+      "name": "香雅情",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json"
     }
   ]
 }
