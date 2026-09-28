@@ -1,0 +1,41 @@
+{
+  "storeName": "本地聚合",
+  "urls": [
+    {
+      "name": "YSC全量源",
+      "url": "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json"
+    },
+    {
+      "name": "挺好分享",
+      "url": "http://ztha.top/TVBox/GYCK.json"
+    },
+    {
+      "name": "月光宝盒",
+      "url": "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json"
+    },
+    {
+      "name": "俊哥源",
+      "url": "http://home.jundie.top:81/top98.json"
+    },
+    {
+      "name": "小马源",
+      "url": "https://szyyds.cn/tv/x.json"
+    },
+    {
+      "name": "HGYX影视",
+      "url": "https://api.hgyx.vip/hgyx.json"
+    },
+    {
+      "name": "聚玩盒子4K",
+      "url": "http://xhztv.top/4k.json"
+    },
+    {
+      "name": "拾光多仓",
+      "url": "http://xmbjm.fh4u.org/dc.txt"
+    },
+    {
+      "name": "小盒子多仓",
+      "url": "http://xhztv.top/dc"
+    }
+  ]
+}
