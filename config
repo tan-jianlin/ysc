@@ -20,6 +20,10 @@
     {
       "name": "青龙",
       "url": "https://6758.kstore.space/1.json"
+    },
+    {
+      "name": "电视直播",
+      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json"
     }
   ]
 }

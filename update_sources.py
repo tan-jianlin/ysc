@@ -30,27 +30,26 @@ BLOCKLIST = [
     "http://home.jundie.top:81/top98.json",
     "http://xmbjm.fh4u.org/dc.txt",
     "http://xhztv.top/dc",
+    "https://www.yingm.cc/dm/dm.json",                      # 动漫专属：电视打不开
+    "http://影视仓.com/",                                    # 中文域名：电视不支持
+    "http://tvbox.王二小放牛娃.top",                          # 中文域名：电视不支持
+    "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json",
+    "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json",
 ]
 
 # 站点级抽查：验证通过后抽查源内部前 N 个站点，防止"文件在但内容全失效"
 SITE_CHECK_N = 3
 
-# 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充
+# 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充（仅保留电视实测可访问的源）
 CANDIDATES = [
     ("小马源", "https://szyyds.cn/tv/x.json"),
     ("HGYX影视", "https://api.hgyx.vip/hgyx.json"),
     ("聚玩盒子4K", "http://xhztv.top/4k.json"),
-    ("动漫专属", "https://www.yingm.cc/dm/dm.json"),
-    ("影视仓com", "http://影视仓.com/"),
-    ("王二小", "http://tvbox.王二小放牛娃.top"),
     ("王二小备用", "https://9280.kstore.space/wex.json"),
     ("青龙", "https://6758.kstore.space/1.json"),
-    # GitHub 大而全源（经 gh-proxy.com 国内加速，含点播/直播/解析）
-    ("jsm大而全", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json"),
-    ("饭太硬fty", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json"),
-    ("潇洒", "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json"),
-    ("高天流云", "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"),
-    ("香雅情", "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json"),
 ]
 
 
@@ -132,6 +131,8 @@ def validate(content):
             return True, "单仓OK"
         if 'urls' in j:
             return True, "多仓OK"
+        if 'lives' in j:
+            return True, "直播OK"
     return False, "不是TVBox配置结构"
 
 

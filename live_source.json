@@ -1,0 +1,9 @@
+{
+  "name": "电视直播",
+  "lives": [
+    {
+      "name": "央视卫视直播",
+      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_list.m3u"
+    }
+  ]
+}
