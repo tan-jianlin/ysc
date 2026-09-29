@@ -23,9 +23,9 @@
   "http://xhztv.top/4k.json": {
     "name": "聚玩盒子4K",
     "last_ok": "2026-09-29",
-    "fail_days": 1,
-    "status": "fail",
-    "note": "下载失败"
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK(宽松)"
   },
   "http://xmbjm.fh4u.org/dc.txt": {
     "name": "拾光多仓",
@@ -222,5 +222,12 @@
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)"
+  },
+  "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json": {
+    "name": "电视直播",
+    "last_ok": "2026-09-29",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "直播OK"
   }
 }
