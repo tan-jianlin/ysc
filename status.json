@@ -9,23 +9,23 @@
   "https://szyyds.cn/tv/x.json": {
     "name": "小马源",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "https://api.hgyx.vip/hgyx.json": {
     "name": "HGYX影视",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK(宽松)"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "http://xhztv.top/4k.json": {
     "name": "聚玩盒子4K",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK(宽松)"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "http://xmbjm.fh4u.org/dc.txt": {
     "name": "拾光多仓",
@@ -86,16 +86,16 @@
   "https://9280.kstore.space/wex.json": {
     "name": "王二小备用",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "https://6758.kstore.space/1.json": {
     "name": "青龙",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK(宽松)"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json": {
     "name": "jsm大而全",
@@ -135,8 +135,8 @@
   "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json": {
     "name": "电视直播",
     "last_ok": "2026-09-30",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "直播OK"
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败"
   }
 }
