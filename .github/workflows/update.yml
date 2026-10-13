@@ -1,0 +1,30 @@
+name: 影视仓接口自动更新
+
+on:
+  schedule:
+    # 每天 UTC 4点 = 北京时间 12点
+    - cron: '0 4 * * *'
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 运行更新脚本
+        run: python update_sources.py
+
+      - name: 推送到 Gitee
+        run: |
+          git config user.name "tan-jianlin"
+          git config user.email "auto@ysc.local"
+          git add -A
+          git diff --staged --quiet || git commit -m "auto update $(date +%Y-%m-%d)"
+          git push https://tan-jianlin:${{ secrets.GITEE_TOKEN }}@gitee.com/tan-jianlin/ysc.git HEAD:master
