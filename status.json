@@ -8,21 +8,21 @@
   },
   "https://szyyds.cn/tv/x.json": {
     "name": "小马源",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK"
   },
   "https://api.hgyx.vip/hgyx.json": {
     "name": "HGYX影视",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)"
   },
   "http://xhztv.top/4k.json": {
     "name": "聚玩盒子4K",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)"
@@ -85,14 +85,14 @@
   },
   "https://9280.kstore.space/wex.json": {
     "name": "王二小备用",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK"
   },
   "https://6758.kstore.space/1.json": {
     "name": "青龙",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)"
@@ -134,7 +134,7 @@
   },
   "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json": {
     "name": "电视直播",
-    "last_ok": "2026-10-12",
+    "last_ok": "2026-10-13",
     "fail_days": 0,
     "status": "ok",
     "note": "直播OK"
