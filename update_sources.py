@@ -219,10 +219,10 @@ def load_config():
 
 
 def push_to_gitee():
-    """将更新后的 config / config_kids / status 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
+    """将更新后的 config / config_kids / status / 直播列表 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
     try:
         steps = [
-            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json'],
+            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json', 'live_list.m3u', 'live_source.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
             ['git', '-C', BASE_DIR, 'push', 'origin', 'master'],
         ]
@@ -234,6 +234,52 @@ def push_to_gitee():
     except Exception as e:
         log("推送线上失败（电脑网络或登录态问题，本地配置已更新）: %s" % e)
         return False
+
+
+def validate_kids():
+    """儿童聚合验证：儿童聚合里的源若连续失效则自动剔除（保持可用性）"""
+    path = os.path.join(BASE_DIR, 'config_kids')
+    if not os.path.exists(path):
+        return
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            kids = json.load(f)
+    except Exception:
+        return
+    status = load_status()
+    urls = kids.get("urls", [])
+    if not isinstance(urls, list) or len(urls) == 0:
+        return
+    new_urls = []
+    for it in urls:
+        if not isinstance(it, dict) or not it.get("url"):
+            continue
+        rec = status.get(it["url"], {})
+        if rec.get("status") == "ok":
+            new_urls.append(it)
+        elif rec.get("fail_days", 0) < MAX_FAIL_DAYS:
+            new_urls.append(it)  # 曾可用未达阈值，保留
+        else:
+            log("儿童聚合剔除失效源 %s (%s)" % (it.get("name", "未命名"), it["url"]))
+    if len(new_urls) != len(urls):
+        kids["urls"] = new_urls
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(kids, f, ensure_ascii=False, indent=2)
+        log("config_kids 已更新：%d -> %d 个源" % (len(urls), len(new_urls)))
+
+
+def refresh_live():
+    """直播保鲜：拉取最新 IPV6 直播列表（fanmingming），成功则更新本地列表，随下次 push 同步线上"""
+    live_path = os.path.join(BASE_DIR, 'live_list.m3u')
+    src = "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u"
+    content = fetch(src)
+    if content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000:
+        with open(live_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        log("直播列表已保鲜更新 (%d 字节)" % len(content.encode('utf-8')))
+        return True
+    log("直播列表更新失败，保留现有列表")
+    return False
 
 
 def main():
@@ -306,6 +352,10 @@ def main():
         if len(new_urls) >= MAX_SOURCES:
             break
 
+    # 清理长期失效且从未成功的僵尸状态记录，保持 status.json 精简
+    for u in [u for u, r in status.items() if r.get("last_ok") is None and r.get("fail_days", 0) >= MAX_FAIL_DAYS]:
+        status.pop(u, None)
+
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump({"storeName": store, "urls": new_urls}, f, ensure_ascii=False, indent=2)
     save_status(status)
@@ -323,6 +373,9 @@ def main():
         notify_change(msg)
     elif ok_count >= 2 and len([u for u, r in status.items() if r.get("status") == "ok" and r.get("last_ok") == today]) < 1:
         notify_change("今日源检测异常，请查看 update_log.txt")
+    # 儿童聚合验证 + 直播列表保鲜
+    validate_kids()
+    refresh_live()
     push_to_gitee()
     log("===== 结束 =====")
 
