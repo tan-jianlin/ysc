@@ -27,5 +27,4 @@ jobs:
           git config user.email "auto@ysc.local"
           git add -A
           git diff --staged --quiet || git commit -m "auto update $(date +%Y-%m-%d)"
-          git pull https://tan-jianlin:${{ secrets.GITEE_TOKEN }}@gitee.com/tan-jianlin/ysc.git master --rebase
           git push https://tan-jianlin:${{ secrets.GITEE_TOKEN }}@gitee.com/tan-jianlin/ysc.git HEAD:master --force
