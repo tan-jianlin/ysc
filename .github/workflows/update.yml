@@ -21,7 +21,8 @@ jobs:
       - name: 运行更新脚本
         run: python update_sources.py
 
-      - name: 推送到 Gitee
+      - name: 推送到 Gitee1
+              continue-on-error: true
         run: |
           git config user.name "tan-jianlin"
           git config user.email "auto@ysc.local"
