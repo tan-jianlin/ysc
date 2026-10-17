@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 """
 影视仓聚合接口 - 每日自动查找与验证影视源
-每天 12:00 由 Windows 计划任务调用，自动完成：
+每天 12:00（北京时间）自动运行，触发方式有两种：
+  - Windows 计划任务（本机）
+  - GitHub Actions（.github/workflows/update.yml，UTC 04:00）
+流程：
   1. 验证 config 中每个源的可用性（HTTP 200 + 合法 TVBox JSON 结构）
   2. 连续 3 天失效的源自动剔除
   3. 从候选源池自动验证可用新源并补充进 config
   4. 更新 status.json 记录每个源的检测状态
+  5. 同步 config / config_kids / status.json / live_list.m3u 到远端
 """
 import json
 import os
@@ -21,6 +25,8 @@ LOG_PATH = os.path.join(BASE_DIR, 'update_log.txt')
 MAX_FAIL_DAYS = 3            # 连续失败天数阈值，达到后自动剔除
 MAX_SOURCES = 15             # config 中最多保留的源数量
 DOWNLOAD_LIMIT = 512 * 1024  # 单源下载上限 512KB
+# 直播列表单独放宽上限：m3u 常年在几百 KB 到数 MB，沿用 512KB 会导致保鲜静默失败
+LIVE_DOWNLOAD_LIMIT = 8 * 1024 * 1024
 
 # 电视实测不可用黑名单（家庭网络无法访问/影视仓解析失败），即使电脑验证通过也不加入 config
 BLOCKLIST = [
@@ -77,7 +83,7 @@ def idna_url(url):
     return url
 
 
-def fetch(url):
+def fetch(url, limit=DOWNLOAD_LIMIT):
     """下载 URL 内容，返回文本；失败返回 None（兼容 gzip、中文域名）"""
     try:
         url = idna_url(url)
@@ -86,8 +92,9 @@ def fetch(url):
             'Accept-Encoding': 'identity',
         })
         with urllib.request.urlopen(req, timeout=12) as resp:
-            body = resp.read(DOWNLOAD_LIMIT + 1)
-            if len(body) > DOWNLOAD_LIMIT:
+            body = resp.read(limit + 1)
+            if len(body) > limit:
+                log("  内容超过上限 %d 字节，跳过 %s" % (limit, url))
                 return None
             enc = resp.headers.get('Content-Encoding', '')
             if enc.lower() == 'gzip':
@@ -173,9 +180,12 @@ def site_spot_check(content):
 
 
 def notify_change(msg):
-    """Windows 桌面通知（源有新增/剔除/大面积失效时提醒用户）"""
+    """Windows 桌面通知（源有新增/剔除/大面积失效时提醒用户）
+
+    仅 Windows 有效；在 GitHub Actions 的 ubuntu-latest 上会失败，
+    属预期行为，由 try/except 兜住，不影响主流程。
+    """
     try:
-        import subprocess
         ps = (
             "Add-Type -AssemblyName System.Windows.Forms;"
             "$n=New-Object System.Windows.Forms.NotifyIcon;"
@@ -189,7 +199,7 @@ def notify_change(msg):
         subprocess.run(['powershell', '-NoProfile', '-Command', ps], timeout=20)
         log("已发送桌面通知")
     except Exception as e:
-        log("桌面通知发送失败: %s" % e)
+        log("桌面通知发送失败（非 Windows 环境属正常）: %s" % e)
 
 
 def load_status():
@@ -219,20 +229,41 @@ def load_config():
 
 
 def push_to_gitee():
-    """将更新后的 config / config_kids / status / 直播列表 推送到 Gitee 线上，让电视不依赖电脑也能读取最新配置"""
+    """将更新后的 config / config_kids / status / 直播列表 推送到远端，让电视不依赖电脑也能读取最新配置。
+
+    远端由环境变量 GIT_PUSH_REMOTE 指定，默认 origin。
+    注意：在 GitHub Actions 里 origin 指向 GitHub 本身，需要 workflow 授予
+    contents: write 权限，否则 git push 会返回 403（原先失败被静默吞掉）。
+    推送到 Gitee 由 workflow 的独立步骤负责，不由本函数承担。
+    """
+    remote = os.environ.get('GIT_PUSH_REMOTE', 'origin')
     try:
         steps = [
             ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json', 'live_list.m3u', 'live_source.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
-            ['git', '-C', BASE_DIR, 'push', 'origin', 'master'],
+            ['git', '-C', BASE_DIR, 'push', remote, 'master'],
         ]
-        for c in steps:
+        for i, c in enumerate(steps):
             r = subprocess.run(c, capture_output=True, text=True, timeout=90)
-            log("  git %s -> 退出码 %d" % (c[2], r.returncode))
-        log("已同步到 Gitee 线上")
+            label = ' '.join(c[3:])
+            log("  git %s -> 退出码 %d" % (label, r.returncode))
+            if r.returncode == 0:
+                continue
+            if i == 0:
+                log("  暂存失败：%s" % (r.stderr or '').strip()[:300])
+                return False
+            if i == 1:
+                if 'nothing to commit' in (r.stdout or '') or 'nothing added' in (r.stdout or ''):
+                    log("  无改动可提交（正常）")
+                else:
+                    log("  提交失败：%s" % (r.stderr or '').strip()[:300])
+            if i == 2:
+                log("  推送 %s 失败：%s" % (remote, (r.stderr or '').strip()[:400]))
+                return False
+        log("已同步到远端 %s" % remote)
         return True
     except Exception as e:
-        log("推送线上失败（电脑网络或登录态问题，本地配置已更新）: %s" % e)
+        log("推送远端失败（网络或登录态问题，本地配置已更新）: %s" % e)
         return False
 
 
@@ -269,10 +300,10 @@ def validate_kids():
 
 
 def refresh_live():
-    """直播保鲜：拉取最新 IPV6 直播列表（fanmingming），成功则更新本地列表，随下次 push 同步线上"""
+    """直播保鲜：拉取最新直播列表（Guovin），成功则更新本地列表，随下次 push 同步线上"""
     live_path = os.path.join(BASE_DIR, 'live_list.m3u')
     src = "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u"
-    content = fetch(src)
+    content = fetch(src, limit=LIVE_DOWNLOAD_LIMIT)
     if content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000:
         with open(live_path, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -360,7 +391,9 @@ def main():
         json.dump({"storeName": store, "urls": new_urls}, f, ensure_ascii=False, indent=2)
     save_status(status)
 
-    ok_count = len([u for u, r in status.items() if r.get("status") == "ok"])
+    # 可用数只统计 config 中实际保留的源；status 里还留着已进黑名单的历史记录，
+    # 直接用 status 统计会得出"保留 6 个源、当前可用 19 个"这种自相矛盾的数字。
+    ok_count = sum(1 for it in new_urls if status.get(it["url"], {}).get("status") == "ok")
     log("更新完成：config 保留 %d 个源，其中当前可用 %d 个" % (len(new_urls), ok_count))
     # 有变化时发送桌面通知
     if added or removed:
@@ -371,7 +404,7 @@ def main():
             msg += "剔除失效源：%s。" % "、".join(removed)
         msg += "当前配置 %d 个源。" % len(new_urls)
         notify_change(msg)
-    elif ok_count >= 2 and len([u for u, r in status.items() if r.get("status") == "ok" and r.get("last_ok") == today]) < 1:
+    elif ok_count >= 2 and len([it for it in new_urls if status.get(it["url"], {}).get("last_ok") == today]) < 1:
         notify_change("今日源检测异常，请查看 update_log.txt")
     # 儿童聚合验证 + 直播列表保鲜
     validate_kids()

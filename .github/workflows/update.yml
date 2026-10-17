@@ -6,6 +6,12 @@ on:
     - cron: '0 4 * * *'
   workflow_dispatch: # 允许手动触发
 
+# 关键：2023 年之后新建的仓库，GITHUB_TOKEN 默认对 contents 只读。
+# update_sources.py 里的 push_to_gitee() 会执行 git push origin master，
+# 没有这个权限就会静默 403，导致 GitHub 侧的 config / status.json 永远停在旧版本。
+permissions:
+  contents: write
+
 jobs:
   update:
     runs-on: ubuntu-latest
