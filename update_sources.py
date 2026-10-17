@@ -282,47 +282,58 @@ def load_config():
         return {"storeName": "本地聚合", "urls": []}
 
 
-def push_to_gitee():
-    """将更新后的 config / config_kids / status / 直播列表 推送到远端，让电视不依赖电脑也能读取最新配置。
+def push_remotes():
+    """把 config / 直播列表同步到远端，让电视不依赖电脑也能读到最新配置。
 
-    远端由环境变量 GIT_PUSH_REMOTE 指定，默认 origin。
-    注意：在 GitHub Actions 里 origin 指向 GitHub 本身，需要 workflow 授予
-    contents: write 权限，否则 git push 会返回 403（原先失败被静默吞掉）。
-    推送到 Gitee 由 workflow 的独立步骤负责，不由本函数承担。
+    2026-10-17 起同时推 origin(GitHub) 与 gitee，两个远端独立成败：
+      - gitee 承载 config（点播线路），国内必达；
+      - origin 承载直播 m3u（Gitee 对含 #EXTM3U 的内容一律 451，只能放 GitHub）。
+    分开推的原因：当天本机到 GitHub 的 TLS 链路中断时，若只推 origin，Gitee 上的
+    config 也会跟着停更，电视点播一起挂；而每日任务会因此天天弹窗，实际线路是好的。
+    只有两个远端都失败才算故障。
+
+    GIT_PUSH_REMOTE 显式指定时只推该远端（GitHub Actions 里用它推自己）。
+    返回 {remote: bool}。
     """
-    remote = os.environ.get('GIT_PUSH_REMOTE', 'origin')
+    only = os.environ.get('GIT_PUSH_REMOTE')
+    targets = [only] if only else ['origin', 'gitee']
+    result = {t: False for t in targets}
     try:
+        # live_light.m3u 等文件可能尚未生成，排除不存在的路径，避免 git add 整体失败
+        addable = [p for p in ('config', 'config_kids', 'status.json', 'live_list.m3u',
+                               'live_light.m3u', 'live_source.json', 'live_full.json')
+                   if os.path.exists(os.path.join(BASE_DIR, p))]
         steps = [
-            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json',
-              'live_list.m3u', 'live_light.m3u', 'live_source.json', 'live_full.json'],
+            ['git', '-C', BASE_DIR, 'add'] + addable,
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
-            # 用 HEAD:master 而不是 master：后者推的是本地 master 分支，
-            # 一旦本地检出在 main，就会推上去旧内容却返回成功（静默假成功）。
-            ['git', '-C', BASE_DIR, 'push', remote, 'HEAD:master'],
         ]
         for i, c in enumerate(steps):
             r = subprocess.run(c, capture_output=True, text=True, timeout=90)
-            label = ' '.join(c[3:])
-            log("  git %s -> 退出码 %d" % (label, r.returncode))
+            log("  git %s -> 退出码 %d" % (' '.join(c[3:]), r.returncode))
             if r.returncode == 0:
                 continue
             if i == 0:
                 log("  暂存失败：%s" % (r.stderr or '').strip()[:300])
-                return False
-            if i == 1:
-                if 'nothing to commit' in (r.stdout or '') or 'nothing added' in (r.stdout or ''):
-                    log("  无改动可提交（正常）")
-                else:
-                    log("  提交失败：%s" % (r.stderr or '').strip()[:300])
-                    return False
-            if i == 2:
-                log("  推送 %s 失败：%s" % (remote, (r.stderr or '').strip()[:400]))
-                return False
-        log("已同步到远端 %s" % remote)
-        return True
+                return result
+            if 'nothing to commit' in (r.stdout or '') or 'nothing added' in (r.stdout or ''):
+                log("  无改动可提交（正常）")
+            else:
+                log("  提交失败：%s" % (r.stderr or '').strip()[:300])
+                return result
+        # 用 HEAD:master 而不是 master：后者推的是本地 master 分支，
+        # 一旦本地检出在 main，就会推上去旧内容却返回成功（静默假成功）。
+        for remote in targets:
+            r = subprocess.run(['git', '-C', BASE_DIR, 'push', remote, 'HEAD:master'],
+                               capture_output=True, text=True, timeout=120)
+            if r.returncode == 0:
+                result[remote] = True
+                log("已同步到远端 %s" % remote)
+            else:
+                log("  推送 %s 失败：%s" % (remote, (r.stderr or '').strip()[:300]))
+        return result
     except Exception as e:
         log("推送远端失败（网络或登录态问题，本地配置已更新）: %s" % e)
-        return False
+        return result
 
 
 def validate_kids():
@@ -654,10 +665,19 @@ def check_live_feed():
     电视上就是一片空白，而每日日志依旧显示"直播OK"。
     """
     ok_cnt = 0
+    local_cnt = 0
+    live_path = os.path.join(BASE_DIR, 'live_list.m3u')
+    if os.path.exists(live_path):
+        try:
+            with open(live_path, 'r', encoding='utf-8', errors='ignore') as f:
+                local_cnt = len(parse_m3u_blocks(f.read()))
+        except Exception:
+            local_cnt = 0
     for host, tpl in LIVE_FEED_MIRRORS:
         url = tpl % 'live_list.m3u'
         try:
-            text = fetch(url, limit=LIVE_DOWNLOAD_LIMIT)
+            # ghfast 直读偶发超过单次 12s 超时，用重试避免把"慢"误判成"挂"
+            text = fetch_retry(url, limit=LIVE_DOWNLOAD_LIMIT, attempts=2, wait=2)
         except Exception as e:
             log("  ⚠️ 直播直链不可用(%s)：%s" % (host, str(e)[:40]))
             continue
@@ -670,6 +690,8 @@ def check_live_feed():
             continue
         ok_cnt += 1
         log("  直播直链可用：%s（%d 条）" % (host, cnt))
+        if local_cnt and cnt != local_cnt:
+            log("  ⚠️ %s 与本地列表不一致（线上 %d 条 / 本地 %d 条）：镜像缓存或推送未生效" % (host, cnt, local_cnt))
     if ok_cnt == 0:
         notify_change("直播源直链全部取不到，电视「直播」页会空白")
         return False
@@ -813,7 +835,10 @@ def main():
     # 儿童聚合验证 + 直播列表保鲜
     validate_kids()
     refresh_live()
-    push_ok = push_to_gitee()
+    push_res = push_remotes()
+    push_ok = any(push_res.values())
+    if not push_res.get('origin'):
+        log("⚠️ GitHub 未同步：直播直链会继续用线上旧列表，链路恢复后需补推")
     # 推送之后再做对外地址自检，确认电视端真的能下载到直播列表
     check_live_repo()
     check_live_feed()
