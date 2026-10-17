@@ -13,6 +13,7 @@
 """
 import json
 import os
+import re
 import subprocess
 import urllib.request
 import datetime
@@ -48,6 +49,21 @@ BLOCKLIST = [
 
 # 站点级抽查：验证通过后抽查源内部前 N 个站点，防止"文件在但内容全失效"
 SITE_CHECK_N = 3
+
+# 额外并入直播列表的国外频道源：(分组标签, m3u 地址, 最多并入条数)
+# 用 iptv-org 的公开列表，github.io 在国内可直连；每个源限量，避免列表膨胀到几千条拖慢电视
+EXTRA_LIVE_SOURCES = [
+    ("美国", "https://iptv-org.github.io/iptv/countries/us.m3u", 150),
+    ("英国", "https://iptv-org.github.io/iptv/countries/uk.m3u", 120),
+    ("德国", "https://iptv-org.github.io/iptv/countries/de.m3u", 80),
+    ("韩国", "https://iptv-org.github.io/iptv/countries/kr.m3u", 60),
+    ("日本", "https://iptv-org.github.io/iptv/countries/jp.m3u", 40),
+    ("新加坡", "https://iptv-org.github.io/iptv/countries/sg.m3u", 40),
+]
+
+# 合并时跳过的域名：实测在国内网络下恒定返回 4xx，占名额但放不出来
+# （jmp2.uk 是 Pluto TV 的区域跳转，缺地区参数一律 400）
+EXTRA_LIVE_SKIP_HOSTS = ('jmp2.uk',)
 
 # 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充（仅保留电视实测可访问的源）
 CANDIDATES = [
@@ -302,10 +318,92 @@ def validate_kids():
         log("config_kids 已更新：%d -> %d 个源" % (len(urls), len(new_urls)))
 
 
+def parse_m3u_blocks(text):
+    """把 m3u 拆成 [(EXTINF行, 中间指令行, URL), ...]
+
+    中间的 #EXTVLCOPT / #KODIPROP / #EXTGRP 等指令必须原样保留——
+    有些源要靠它们携带 Referer / User-Agent，丢了就播不出来。
+    """
+    blocks = []
+    extinf = None
+    middle = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith('#EXTINF'):
+            extinf = line
+            middle = []
+        elif line.startswith('#') and extinf is not None:
+            middle.append(line)
+        elif line.startswith(('http://', 'https://')) and extinf is not None:
+            blocks.append((extinf, middle, line))
+            extinf = None
+            middle = []
+    return blocks
+
+
+def set_group(extinf, group):
+    """替换 EXTINF 里的 group-title，没有就在频道名前插入"""
+    if 'group-title="' in extinf:
+        return re.sub(r'group-title="[^"]*"', 'group-title="%s"' % group, extinf, count=1)
+    idx = extinf.rfind(',')
+    if idx < 0:
+        return extinf
+    return extinf[:idx] + ' group-title="%s"' % group + extinf[idx:]
+
+
+def merge_extra_live(main_text):
+    """把国外频道源并入主直播列表，按 URL 去重，并给它们单独分组"""
+    blocks = parse_m3u_blocks(main_text)
+    seen = set(u for _, _, u in blocks)
+    header = main_text.splitlines()[0].strip() if main_text.strip() else '#EXTM3U'
+    out = [header]
+    for extinf, middle, url in blocks:
+        out.append(extinf)
+        out.extend(middle)
+        out.append(url)
+    merged_count = 0
+    for label, url, cap in EXTRA_LIVE_SOURCES:
+        text = fetch(url, limit=LIVE_DOWNLOAD_LIMIT)
+        if not text:
+            log("额外频道源获取失败，跳过：%s" % label)
+            continue
+        added = 0
+        for extinf, middle, u in parse_m3u_blocks(text):
+            if added >= cap:
+                break
+            if u in seen:
+                continue
+            idx = extinf.rfind(',')
+            name = extinf[idx + 1:] if idx > 0 else ''
+            # [Geo-blocked] 表示对外地区封锁，国内基本放不出来，直接跳过
+            if 'Geo-blocked' in name:
+                continue
+            host = u.split('//', 1)[-1].split('/', 1)[0].split(':')[0].lower()
+            if any(host == h or host.endswith('.' + h) for h in EXTRA_LIVE_SKIP_HOSTS):
+                continue
+            seen.add(u)
+            out.append(set_group(extinf, '🌍' + label))
+            out.extend(middle)
+            out.append(u)
+            added += 1
+        merged_count += added
+        log("合并国外频道 %s：+%d 条" % (label, added))
+    log("直播列表合并完成：本地 %d 条 + 国外 %d 条 = %d 条"
+        % (len(blocks), merged_count, len(blocks) + merged_count))
+    return '\n'.join(out) + '\n'
+
+
 def refresh_live():
-    """直播保鲜：拉取最新直播列表（Guovin），成功则更新本地列表，随下次 push 同步线上"""
+    """直播保鲜：拉取主列表 + 并入国外频道，更新本地列表后随下次 push 同步线上"""
     live_path = os.path.join(BASE_DIR, 'live_list.m3u')
     src = "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u"
+    content = fetch(src, limit=LIVE_DOWNLOAD_LIMIT)
+    if not (content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000):
+        log("直播列表更新失败，保留现有列表")
+        return False
+    merged = merge_extra_live(content)
     old = None
     if os.path.exists(live_path):
         try:
@@ -313,18 +411,14 @@ def refresh_live():
                 old = f.read()
         except Exception:
             old = None
-    content = fetch(src, limit=LIVE_DOWNLOAD_LIMIT)
-    if content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000:
-        # 上游若长期不更新，这里每天都会"成功"下载到同一份内容——必须显式指出，
-        # 否则会像 2026-08 ~ 2026-10 那样静默空转两个月没人发现。
-        if old is not None and content.strip() == old.strip():
-            log("⚠️ 直播列表上游内容与上次完全相同（该上游可能已停更）")
-        with open(live_path, 'w', encoding='utf-8') as f:
-            f.write(content)
-        log("直播列表已保鲜更新 (%d 字节)" % len(content.encode('utf-8')))
-        return True
-    log("直播列表更新失败，保留现有列表")
-    return False
+    # 上游若长期不更新，这里每天都会"成功"生成同一份内容——必须显式指出，
+    # 否则会像 2026-08 ~ 2026-10 那样静默空转两个月没人发现。
+    if old is not None and merged.strip() == old.strip():
+        log("⚠️ 直播列表内容与上次完全相同（主源可能已停更）")
+    with open(live_path, 'w', encoding='utf-8') as f:
+        f.write(merged)
+    log("直播列表已更新 (%d 字节)" % len(merged.encode('utf-8')))
+    return True
 
 
 def check_public_urls():
