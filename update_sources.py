@@ -15,6 +15,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import urllib.request
 import datetime
 
@@ -529,6 +530,12 @@ def main():
     for u in [u for u, r in status.items() if r.get("last_ok") is None and r.get("fail_days", 0) >= MAX_FAIL_DAYS]:
         status.pop(u, None)
 
+    # 清掉已进黑名单源的历史记录：它们永远不会再被刷新，留着只会让 status.json
+    # 堆积一堆 status=ok 的僵尸条目，误导人为"当前可用源"很多。
+    for u in list(status.keys()):
+        if u in BLOCKLIST:
+            status.pop(u, None)
+
     with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump({"storeName": store, "urls": new_urls}, f, ensure_ascii=False, indent=2)
     save_status(status)
@@ -551,14 +558,22 @@ def main():
     # 儿童聚合验证 + 直播列表保鲜
     validate_kids()
     refresh_live()
-    push_to_gitee()
+    push_ok = push_to_gitee()
     # 推送之后再做对外地址自检，确认电视端真的能下载到直播列表
     check_public_urls()
     log("===== 结束 =====")
+    # 推送失败必须显式告警：以前异常被吞掉，Windows 任务显示 LastTaskResult=0、
+    # Actions 的 step 也是绿的，故障完全不可见（2026-10-17 就出现过）。
+    if not push_ok:
+        notify_change("自动更新跑完了，但推送到远端失败，请检查网络")
+    return push_ok
 
 
 if __name__ == "__main__":
     try:
-        main()
+        _ok = main()
     except Exception as e:
         log("运行异常: %s" % e)
+        _ok = False
+    # 让调用方（Windows 计划任务 / GitHub Actions）能从退出码看出成败
+    sys.exit(0 if _ok else 1)
