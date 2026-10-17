@@ -241,7 +241,9 @@ def push_to_gitee():
         steps = [
             ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json', 'live_list.m3u', 'live_source.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
-            ['git', '-C', BASE_DIR, 'push', remote, 'master'],
+            # 用 HEAD:master 而不是 master：后者推的是本地 master 分支，
+            # 一旦本地检出在 main，就会推上去旧内容却返回成功（静默假成功）。
+            ['git', '-C', BASE_DIR, 'push', remote, 'HEAD:master'],
         ]
         for i, c in enumerate(steps):
             r = subprocess.run(c, capture_output=True, text=True, timeout=90)
