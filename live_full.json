@@ -808,6 +808,12 @@
       "name": "央视卫视直播",
       "type": 0,
       "playerType": 2,
+      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
+    },
+    {
+      "name": "央视卫视直播(jsdmirror)",
+      "type": 0,
+      "playerType": 2,
       "url": "https://cdn.jsdmirror.com/gh/tan-jianlin/ysc@master/live_list.m3u"
     },
     {
@@ -815,12 +821,6 @@
       "type": 0,
       "playerType": 2,
       "url": "https://jsd.onmicrosoft.cn/gh/tan-jianlin/ysc@master/live_list.m3u"
-    },
-    {
-      "name": "央视卫视直播(ghfast)",
-      "type": 0,
-      "playerType": 2,
-      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
     },
     {
       "name": "央视卫视直播(gh-proxy)",

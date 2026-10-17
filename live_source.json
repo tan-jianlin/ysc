@@ -5,18 +5,26 @@
   "lives": [
     {
       "name": "央视卫视直播",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
+    },
+    {
+      "name": "央视卫视直播(jsdmirror)",
+      "type": 0,
+      "playerType": 2,
       "url": "https://cdn.jsdmirror.com/gh/tan-jianlin/ysc@master/live_list.m3u"
     },
     {
       "name": "央视卫视直播(微软CDN)",
+      "type": 0,
+      "playerType": 2,
       "url": "https://jsd.onmicrosoft.cn/gh/tan-jianlin/ysc@master/live_list.m3u"
     },
     {
-      "name": "央视卫视直播(ghfast)",
-      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
-    },
-    {
       "name": "央视卫视直播(gh-proxy)",
+      "type": 0,
+      "playerType": 2,
       "url": "https://gh-proxy.com/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
     }
   ]
