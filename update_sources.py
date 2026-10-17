@@ -468,6 +468,39 @@ def refresh_live():
     return True
 
 
+def check_live_repo():
+    """仓库级自检：电视端"点开电视直播就提示解析失败"，说明 config 里那条 url 本身取不到。
+
+    2026-10-17 就踩过：直播仓库被指到 gh-proxy / jsdelivr，电脑能下、电视取不到，
+    于是两个直播仓库双双"解析失败"，而脚本每天照样报"直播OK"。
+    这里直接校验 config 中的直播仓库地址（能拿到合法 JSON 且含 lives）。
+    """
+    try:
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            cfg = json.load(f)
+    except Exception as e:
+        log("自检：读取 config 失败：%s" % e)
+        return True
+    repo_urls = [it.get('url') for it in (cfg.get('urls') or [])
+                 if isinstance(it, dict) and 'live_source' in (it.get('url') or '')]
+    if not repo_urls:
+        log("自检：config 里没有直播仓库条目")
+        return True
+    ok_repo = 0
+    for u in repo_urls:
+        ok, note = validate(fetch(u, limit=LIVE_DOWNLOAD_LIMIT))
+        if ok:
+            ok_repo += 1
+            log("  直播仓库可用：%s" % u)
+        else:
+            log("  ⚠️ 直播仓库不可用：%s (%s)" % (u, note))
+    if ok_repo == 0:
+        notify_change("两个直播仓库地址都取不到，电视端会提示解析失败")
+        return False
+    log("直播仓库自检通过：%d/%d 条可用" % (ok_repo, len(repo_urls)))
+    return True
+
+
 def check_public_urls():
     """对外地址自检：确认 live_source.json 里给电视用的地址真的能下载到 m3u。
 
@@ -606,6 +639,7 @@ def main():
     refresh_live()
     push_ok = push_to_gitee()
     # 推送之后再做对外地址自检，确认电视端真的能下载到直播列表
+    check_live_repo()
     check_public_urls()
     log("===== 结束 =====")
     # 推送失败必须显式告警：以前异常被吞掉，Windows 任务显示 LastTaskResult=0、
