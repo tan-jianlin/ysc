@@ -1,5 +1,7 @@
 {
   "name": "电视直播",
+  "sites": [],
+  "parses": [],
   "lives": [
     {
       "name": "央视卫视直播",
