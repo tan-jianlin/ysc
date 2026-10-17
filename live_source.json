@@ -3,7 +3,11 @@
   "lives": [
     {
       "name": "央视卫视直播",
-      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_list.m3u"
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_list.m3u"
+    },
+    {
+      "name": "央视卫视直播(备用)",
+      "url": "https://cdn.jsdelivr.net/gh/tan-jianlin/ysc@master/live_list.m3u"
     }
   ]
 }
