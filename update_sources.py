@@ -259,6 +259,7 @@ def push_to_gitee():
                     log("  无改动可提交（正常）")
                 else:
                     log("  提交失败：%s" % (r.stderr or '').strip()[:300])
+                    return False
             if i == 2:
                 log("  推送 %s 失败：%s" % (remote, (r.stderr or '').strip()[:400]))
                 return False

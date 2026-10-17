@@ -26,6 +26,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: 配置 Git 身份
+        run: |
+          git config user.name "tan-jianlin"
+          git config user.email "auto@ysc.local"
+
       - name: 运行更新脚本
         run: python update_sources.py
 
