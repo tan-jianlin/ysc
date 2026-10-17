@@ -19,6 +19,7 @@ import ssl
 import sys
 import time
 import urllib.request
+import urllib.parse
 import concurrent.futures
 import datetime
 
@@ -510,28 +511,80 @@ def reorder_groups(text):
     return '\n'.join(out) + '\n'
 
 
-def _probe_stream(url, timeout=4):
-    """单条直播流可达性探测：能拿到 200 且读得到字节就算活"""
-    try:
-        u = idna_url(url)
-        req = urllib.request.Request(u, headers={
-            'User-Agent': 'okhttp/3.12.1',
-            'Accept-Encoding': 'identity',
-        })
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+# 境外直播流测速门槛：达不到就是"点开转圈半天再失败"，收录了也没意义
+# 90KB/s ≈ 720kbps，低于这个值连标清直播都会持续缓冲
+OVERSEAS_MIN_RATE = 90 * 1024
+
+
+def _probe_stream(url, timeout=5, min_rate=OVERSEAS_MIN_RATE):
+    """境外直播流体检：返回实测速率（字节/秒），0 表示不可用。
+
+    只看"能不能连上"不够——2026-10-17 用户反馈"国外台转半天圈还是不行"，
+    正是那种返回 200 却拖不动的流：连接建立了，分片迟迟不来。
+    所以这里必须真的下载数据并计时；HLS 的 playlist 本身只有几 KB，
+    要顺着它取第一个分片，测出来的才是真实播放速率。
+    """
+    headers = {'User-Agent': 'okhttp/3.12.1', 'Accept-Encoding': 'identity'}
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+
+    def grab(target, want, head_max):
+        got, head, t0 = 0, b'', time.time()
+        req = urllib.request.Request(target, headers=headers)
         with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
-            return resp.status == 200 and len(resp.read(256)) > 0
+            if resp.status != 200:
+                return 0, 0.0, b''
+            while got < want:
+                chunk = resp.read(min(48 * 1024, want - got))
+                if not chunk:
+                    break
+                if not head:
+                    head = chunk[:head_max]
+                got += len(chunk)
+                if time.time() - t0 >= timeout:
+                    break
+        return got, max(time.time() - t0, 0.05), head
+
+    try:
+        got, dt, head = grab(url, 256 * 1024, 32 * 1024)
+        if not got:
+            return 0.0
+        if head.lstrip()[:7] != b'#EXTM3U':
+            rate = got / dt
+            return rate if rate >= min_rate else 0.0
+        # HLS：顺着 playlist 取第一个分片，最多跟两层
+        target = url
+        text = head.decode('utf-8', 'ignore')
+        for _ in range(3):
+            seg = ''
+            for line in text.splitlines():
+                s = line.strip()
+                if s and not s.startswith('#'):
+                    seg = s
+                    break
+            if not seg:
+                return 0.0
+            target = urllib.parse.urljoin(target, seg)
+            got, dt, head = grab(target, 256 * 1024, 800)
+            if not got:
+                return 0.0
+            if head.lstrip()[:7] != b'#EXTM3U':
+                rate = got / dt
+                return rate if rate >= min_rate else 0.0
+            text = head.decode('utf-8', 'ignore')
+        return 0.0
     except Exception:
-        return False
+        return 0.0
 
 
-def prune_dead_overseas(text, timeout=4, workers=16):
-    """境外频道体检：geo-block / 死链先删掉，别占着分组让电视逐个点都放不出来
+def prune_dead_overseas(text, timeout=5, workers=24):
+    """境外频道体检：连得上但拖不动的流一并剔除，别让电视点进去干等
 
-    只动境外分组，国内频道一条不碰；若整体可用率低于 30%，判定为本机网络异常，
-    保留原样不动（宁可留着让电视自己试，也不能因为一次断网把好频道全删了）。
+    只动境外分组，国内频道一条不碰。保留的按实测速率从快到慢排序——
+    用户点第一个就是最流畅的台，不用逐个试错。
+    若整体可用率低于 10%，判定本机网络异常，保留原样不动
+    （宁可留着让电视自己试，也不能因为一次断网把好频道全删了）。
     """
     blocks = parse_m3u_blocks(text)
     if not blocks:
@@ -544,24 +597,41 @@ def prune_dead_overseas(text, timeout=4, workers=16):
             targets.append((idx, url))
     if not targets:
         return text
-    alive = {}
+    rates = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
-        for (idx, url), ok in zip(targets, ex.map(lambda t: _probe_stream(t[1], timeout), targets)):
-            alive[idx] = ok
-    live_cnt = sum(1 for v in alive.values() if v)
+        for (idx, url), r in zip(targets, ex.map(lambda t: _probe_stream(t[1], timeout), targets)):
+            rates[idx] = r
+    live_cnt = sum(1 for v in rates.values() if v > 0)
     ratio = live_cnt / float(len(targets))
-    if ratio < 0.3:
+    if ratio < 0.1:
         log("境外频道体检可用率仅 %.0f%%，疑似本机网络异常，本次不剔除" % (ratio * 100))
         return text
-    out = [header]
+    normal, buckets = [], {}
     for idx, (extinf, middle, url) in enumerate(blocks):
-        if idx in alive and not alive[idx]:
-            continue
+        m = re.search(r'group-title="([^"]*)"', extinf)
+        g = m.group(1) if m else ''
+        if g in OVERSEAS_GROUPS:
+            r = rates.get(idx, 0)
+            if r <= 0:
+                continue
+            buckets.setdefault(g, []).append((r, extinf, middle, url))
+        else:
+            normal.append((extinf, middle, url))
+    out = [header]
+    for extinf, middle, url in normal:
         out.append(extinf)
         out.extend(middle)
         out.append(url)
-    log("境外频道体检：%d 条可用 / 共 %d 条，剔除死链 %d 条"
+    for g, items in buckets.items():
+        for _r, extinf, middle, url in sorted(items, key=lambda x: -x[0]):
+            out.append(extinf)
+            out.extend(middle)
+            out.append(url)
+    log("境外频道测速体检：%d 条流畅 / 共 %d 条，剔除卡顿与死链 %d 条"
         % (live_cnt, len(targets), len(targets) - live_cnt))
+    for g, items in sorted(buckets.items(), key=lambda kv: -len(kv[1])):
+        log("    %s 保留 %d 条（最快 %.0f KB/s）"
+            % (g, len(items), max(x[0] for x in items) / 1024))
     return '\n'.join(out) + '\n'
 
 
