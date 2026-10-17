@@ -23,11 +23,11 @@
     },
     {
       "name": "电视直播",
-      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json"
+      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_full.json?v=20261017"
     },
     {
       "name": "电视直播(备用)",
-      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_source.json"
+      "url": "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json?v=20261017"
     }
   ]
 }
