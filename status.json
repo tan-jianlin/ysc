@@ -20,6 +20,13 @@
     "status": "ok",
     "note": "单仓OK(宽松)"
   },
+  "http://xhztv.top/4k.json": {
+    "name": "聚玩盒子4K",
+    "last_ok": "2026-10-17",
+    "fail_days": 0,
+    "status": "ok",
+    "note": "单仓OK(宽松)"
+  },
   "http://xmbjm.fh4u.org/dc.txt": {
     "name": "拾光多仓",
     "last_ok": "2026-09-28",

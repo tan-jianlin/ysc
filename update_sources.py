@@ -47,11 +47,6 @@ BLOCKLIST = [
     "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json",
     "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json",
     "https://gh-proxy.com/https://raw.githubusercontent.com/xyq254245/xyqonlinerule/main/XYQTVBox.json",
-    # 2026-10-17 实测剔除：配置本身能下（HTTP 200），但 spider 包
-    # fs-im-kefu.7moor-fs1.com/.../fan.txt 恒定 403（文件上传于 2024-02-04，已过期），
-    # 53 个站点里 39 个依赖该 spider，等于整份配置的 4K/磁力/网盘功能全部失效；
-    # 仅剩 5 个 CMS 直连站可用，且其中量子、索尼与"小马源"重复。
-    "http://xhztv.top/4k.json",
 ]
 
 # 站点级抽查：验证通过后抽查源内部前 N 个站点，防止"文件在但内容全失效"
@@ -80,15 +75,10 @@ EXTRA_CHINA_SOURCES = [
 ]
 
 # 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充（仅保留电视实测可访问的源）
-# 2026-10-17 体检结论（见 update_log 同日记录）：
-#   小马源     spider 949KB 正常，27 个类命中 22，CMS 直连 4/4 可取到 m3u8 —— 保留
-#   王二小备用  spider 937KB 正常，56 个类全部命中 —— 保留（最健康）
-#   青龙       spider 1226KB 正常，17 个类命中 14，6 个脚本全部可下 —— 保留
-#   HGYX影视   spider 661KB 正常（需 URL 编码），CMS 直连 2/4 可取到 m3u8 —— 保留
-#   聚玩盒子4K spider 403 过期 —— 已移入 BLOCKLIST
 CANDIDATES = [
     ("小马源", "https://szyyds.cn/tv/x.json"),
     ("HGYX影视", "https://api.hgyx.vip/hgyx.json"),
+    ("聚玩盒子4K", "http://xhztv.top/4k.json"),
     ("王二小备用", "https://9280.kstore.space/wex.json"),
     ("青龙", "https://6758.kstore.space/1.json"),
 ]
