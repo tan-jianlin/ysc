@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import urllib.request
 import datetime
 
@@ -65,6 +66,13 @@ EXTRA_LIVE_SOURCES = [
 # 合并时跳过的域名：实测在国内网络下恒定返回 4xx，占名额但放不出来
 # （jmp2.uk 是 Pluto TV 的区域跳转，缺地区参数一律 400）
 EXTRA_LIVE_SKIP_HOSTS = ('jmp2.uk',)
+
+# 补充的国内频道源：(标签, m3u 地址, 最多并入条数)
+# 主源 Guovin@gd 已于 2026-08-27 停止更新，这份 vbskycn 的 IPv4 列表仍在维护，
+# 用来给主源兜底——即使主源冻结，列表每天仍能被刷新补充。
+EXTRA_CHINA_SOURCES = [
+    ("vbskycn", "https://cdn.jsdelivr.net/gh/vbskycn/iptv@master/tv/iptv4.m3u", 200),
+]
 
 # 候选源池：每次运行都会重新验证，可用且不在 config 的会自动补充（仅保留电视实测可访问的源）
 CANDIDATES = [
@@ -319,6 +327,18 @@ def validate_kids():
         log("config_kids 已更新：%d -> %d 个源" % (len(urls), len(new_urls)))
 
 
+def fetch_retry(url, limit=DOWNLOAD_LIMIT, attempts=3, wait=2):
+    """带重试的下载。额外频道源只是补充，不该因为一次抖动就整批丢掉。"""
+    for i in range(attempts):
+        content = fetch(url, limit=limit)
+        if content:
+            return content
+        if i < attempts - 1:
+            log("  重试 %s (%d/%d)" % (url, i + 1, attempts))
+            time.sleep(wait)
+    return None
+
+
 def parse_m3u_blocks(text):
     """把 m3u 拆成 [(EXTINF行, 中间指令行, URL), ...]
 
@@ -366,7 +386,7 @@ def merge_extra_live(main_text):
         out.append(url)
     merged_count = 0
     for label, url, cap in EXTRA_LIVE_SOURCES:
-        text = fetch(url, limit=LIVE_DOWNLOAD_LIMIT)
+        text = fetch_retry(url, limit=LIVE_DOWNLOAD_LIMIT)
         if not text:
             log("额外频道源获取失败，跳过：%s" % label)
             continue
@@ -391,7 +411,33 @@ def merge_extra_live(main_text):
             added += 1
         merged_count += added
         log("合并国外频道 %s：+%d 条" % (label, added))
-    log("直播列表合并完成：本地 %d 条 + 国外 %d 条 = %d 条"
+    # 国内补充源：保留它自己的分组名（央视频道/卫视频道等），和主源自然混在一起
+    for label, url, cap in EXTRA_CHINA_SOURCES:
+        text = fetch_retry(url, limit=LIVE_DOWNLOAD_LIMIT)
+        if not text:
+            log("补充国内源获取失败，跳过：%s" % label)
+            continue
+        added = 0
+        for extinf, middle, u in parse_m3u_blocks(text):
+            if added >= cap:
+                break
+            if u in seen:
+                continue
+            idx = extinf.rfind(',')
+            name = extinf[idx + 1:] if idx > 0 else ''
+            if 'Geo-blocked' in name:
+                continue
+            host = u.split('//', 1)[-1].split('/', 1)[0].split(':')[0].lower()
+            if any(host == h or host.endswith('.' + h) for h in EXTRA_LIVE_SKIP_HOSTS):
+                continue
+            seen.add(u)
+            out.append(extinf)
+            out.extend(middle)
+            out.append(u)
+            added += 1
+        merged_count += added
+        log("合并补充国内源 %s：+%d 条" % (label, added))
+    log("直播列表合并完成：本地 %d 条 + 额外 %d 条 = %d 条"
         % (len(blocks), merged_count, len(blocks) + merged_count))
     return '\n'.join(out) + '\n'
 
