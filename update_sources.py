@@ -33,6 +33,22 @@ DOWNLOAD_LIMIT = 512 * 1024  # 单源下载上限 512KB
 # 直播列表单独放宽上限：m3u 常年在几百 KB 到数 MB，沿用 512KB 会导致保鲜静默失败
 LIVE_DOWNLOAD_LIMIT = 8 * 1024 * 1024
 
+# 直播源直链：电视端"直播"页直接添加这个地址即可，与 config 线路完全解耦。
+# 2026-10-17 起不再把直播塞进 config 的 urls（线路要求 sites 非空，纯直播会判解析失败）。
+# 精简版只剔各省地方台（数量占一半、可用率最低、加载最慢），央视/卫视/港澳台/境外全留。
+LIVE_LIGHT_PATH = 'live_light.m3u'
+LIVE_LIGHT_SKIP_PREFIXES = ('☘️',)   # 各省频道分组前缀
+LIVE_LIGHT_SKIP_GROUPS = ('地方频道', '数字频道')
+
+# 直播源直链的镜像模板（%s 处填 live_list.m3u / live_light.m3u）
+# 顺序即优先级：ghfast 直读 GitHub raw，永远最新；jsDelivr 系有独立缓存，只能当备用。
+LIVE_FEED_MIRRORS = [
+    ('ghfast', 'https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/%s'),
+    ('jsdmirror', 'https://cdn.jsdmirror.com/gh/tan-jianlin/ysc@master/%s'),
+    ('onmicrosoft', 'https://jsd.onmicrosoft.cn/gh/tan-jianlin/ysc@master/%s'),
+    ('gh-proxy', 'https://gh-proxy.com/https://raw.githubusercontent.com/tan-jianlin/ysc/master/%s'),
+]
+
 # 电视实测不可用黑名单（家庭网络无法访问/影视仓解析失败），即使电脑验证通过也不加入 config
 BLOCKLIST = [
     "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json",
@@ -278,7 +294,7 @@ def push_to_gitee():
     try:
         steps = [
             ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json',
-              'live_list.m3u', 'live_source.json', 'live_full.json'],
+              'live_list.m3u', 'live_light.m3u', 'live_source.json', 'live_full.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
             # 用 HEAD:master 而不是 master：后者推的是本地 master 分支，
             # 一旦本地检出在 main，就会推上去旧内容却返回成功（静默假成功）。
@@ -563,7 +579,38 @@ def refresh_live():
     with open(live_path, 'w', encoding='utf-8') as f:
         f.write(merged)
     log("直播列表已更新 (%d 字节)" % len(merged.encode('utf-8')))
+
+    # 同步产出精简版：电视端"直播"页直连用，加载更快（约少一半条目）
+    try:
+        light = build_live_light(merged)
+        light_path = os.path.join(BASE_DIR, LIVE_LIGHT_PATH)
+        with open(light_path, 'w', encoding='utf-8') as f:
+            f.write(light)
+        log("精简直播列表已更新 (%d 字节)" % len(light.encode('utf-8')))
+    except Exception as e:
+        log("⚠️ 精简直播列表生成失败：%s" % e)
     return True
+
+
+def build_live_light(text):
+    """剔除各省地方台，只留央视/卫视/港澳台/境外/主题频道，给电视端直连用"""
+    blocks = parse_m3u_blocks(text)
+    if not blocks:
+        return text
+    header = text.splitlines()[0].strip() if text.strip() else '#EXTM3U'
+    out = [header]
+    skipped = 0
+    for extinf, middle, url in blocks:
+        m = re.search(r'group-title="([^"]*)"', extinf)
+        group = m.group(1) if m else ''
+        if group.startswith(LIVE_LIGHT_SKIP_PREFIXES) or group in LIVE_LIGHT_SKIP_GROUPS:
+            skipped += 1
+            continue
+        out.append(extinf)
+        out.extend(middle)
+        out.append(url)
+    log("精简直播列表：保留 %d 条，略过地方台 %d 条" % (len(blocks) - skipped, skipped))
+    return '\n'.join(out) + '\n'
 
 
 def check_live_repo():
@@ -597,6 +644,36 @@ def check_live_repo():
         notify_change("两个直播仓库地址都取不到，电视端会提示解析失败")
         return False
     log("直播仓库自检通过：%d/%d 条可用" % (ok_repo, len(repo_urls)))
+    return True
+
+
+def check_live_feed():
+    """直播源直链自检：电视端"直播"页直接添加的地址是否还能取到列表。
+
+    这批地址不经过 config 线路，所以必须单独盯——否则 GitHub 推送失败 / 加速站挂掉，
+    电视上就是一片空白，而每日日志依旧显示"直播OK"。
+    """
+    ok_cnt = 0
+    for host, tpl in LIVE_FEED_MIRRORS:
+        url = tpl % 'live_list.m3u'
+        try:
+            text = fetch(url, limit=LIVE_DOWNLOAD_LIMIT)
+        except Exception as e:
+            log("  ⚠️ 直播直链不可用(%s)：%s" % (host, str(e)[:40]))
+            continue
+        if not (text and text.lstrip().startswith('#EXTM3U')):
+            log("  ⚠️ 直播直链内容异常(%s)" % host)
+            continue
+        cnt = len(parse_m3u_blocks(text))
+        if cnt < 500:
+            log("  ⚠️ 直播直链条目过少(%s)：%d 条" % (host, cnt))
+            continue
+        ok_cnt += 1
+        log("  直播直链可用：%s（%d 条）" % (host, cnt))
+    if ok_cnt == 0:
+        notify_change("直播源直链全部取不到，电视「直播」页会空白")
+        return False
+    log("直播源直链自检通过：%d/%d 条镜像可用" % (ok_cnt, len(LIVE_FEED_MIRRORS)))
     return True
 
 
@@ -739,6 +816,7 @@ def main():
     push_ok = push_to_gitee()
     # 推送之后再做对外地址自检，确认电视端真的能下载到直播列表
     check_live_repo()
+    check_live_feed()
     check_public_urls()
     log("===== 结束 =====")
     # 推送失败必须显式告警：以前异常被吞掉，Windows 任务显示 LastTaskResult=0、
