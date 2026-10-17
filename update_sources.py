@@ -15,9 +15,11 @@ import json
 import os
 import re
 import subprocess
+import ssl
 import sys
 import time
 import urllib.request
+import concurrent.futures
 import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,16 +54,27 @@ BLOCKLIST = [
 # 站点级抽查：验证通过后抽查源内部前 N 个站点，防止"文件在但内容全失效"
 SITE_CHECK_N = 3
 
-# 额外并入直播列表的国外频道源：(分组标签, m3u 地址, 最多并入条数)
+# 额外并入直播列表的国外频道源：(分组标签, m3u 地址, 最多并入条数, 分组名)
 # 用 iptv-org 的公开列表，github.io 在国内可直连；每个源限量，避免列表膨胀到几千条拖慢电视
+# 港台单独补源，并并入主源已有的"🌊港·澳·台"分组，不再单开两个分组
 EXTRA_LIVE_SOURCES = [
-    ("美国", "https://iptv-org.github.io/iptv/countries/us.m3u", 150),
-    ("英国", "https://iptv-org.github.io/iptv/countries/uk.m3u", 120),
-    ("德国", "https://iptv-org.github.io/iptv/countries/de.m3u", 80),
-    ("韩国", "https://iptv-org.github.io/iptv/countries/kr.m3u", 60),
-    ("日本", "https://iptv-org.github.io/iptv/countries/jp.m3u", 40),
-    ("新加坡", "https://iptv-org.github.io/iptv/countries/sg.m3u", 40),
+    ("美国", "https://iptv-org.github.io/iptv/countries/us.m3u", 150, "🌍美国"),
+    ("英国", "https://iptv-org.github.io/iptv/countries/uk.m3u", 120, "🌍英国"),
+    ("德国", "https://iptv-org.github.io/iptv/countries/de.m3u", 80, "🌍德国"),
+    ("韩国", "https://iptv-org.github.io/iptv/countries/kr.m3u", 60, "🌍韩国"),
+    ("日本", "https://iptv-org.github.io/iptv/countries/jp.m3u", 40, "🌍日本"),
+    ("新加坡", "https://iptv-org.github.io/iptv/countries/sg.m3u", 40, "🌍新加坡"),
+    ("香港", "https://iptv-org.github.io/iptv/countries/hk.m3u", 60, "🌊港·澳·台"),
+    ("台湾", "https://iptv-org.github.io/iptv/countries/tw.m3u", 60, "🌊港·澳·台"),
 ]
+
+# 直播分组排序：境外频道紧跟央视/卫视，不再排在 53 个分组的最后面
+# （2026-10-17 用户反馈"根本看不到外国台"，实际是分组排到最末尾，翻不到）
+GROUP_ORDER = ['🕘️更新时间', '📺央视频道', '央视频道', '📡卫视频道', '卫视频道',
+               '🌊港·澳·台', '🌍美国', '🌍英国', '🌍日本', '🌍韩国', '🌍德国', '🌍新加坡']
+
+# 需要做"可达性体检"的境外分组（geo-block 死链最多，占了分组却放不出来）
+OVERSEAS_GROUPS = ('🌊港·澳·台', '🌍美国', '🌍英国', '🌍日本', '🌍韩国', '🌍德国', '🌍新加坡')
 
 # 合并时跳过的域名：实测在国内网络下恒定返回 4xx，占名额但放不出来
 # （jmp2.uk 是 Pluto TV 的区域跳转，缺地区参数一律 400）
@@ -386,7 +399,7 @@ def merge_extra_live(main_text):
         out.extend(middle)
         out.append(url)
     merged_count = 0
-    for label, url, cap in EXTRA_LIVE_SOURCES:
+    for label, url, cap, group in EXTRA_LIVE_SOURCES:
         text = fetch_retry(url, limit=LIVE_DOWNLOAD_LIMIT)
         if not text:
             log("额外频道源获取失败，跳过：%s" % label)
@@ -406,7 +419,7 @@ def merge_extra_live(main_text):
             if any(host == h or host.endswith('.' + h) for h in EXTRA_LIVE_SKIP_HOSTS):
                 continue
             seen.add(u)
-            out.append(set_group(extinf, '🌍' + label))
+            out.append(set_group(extinf, group))
             out.extend(middle)
             out.append(u)
             added += 1
@@ -443,6 +456,88 @@ def merge_extra_live(main_text):
     return '\n'.join(out) + '\n'
 
 
+def reorder_groups(text):
+    """按 GROUP_ORDER 重排分组：境外频道紧跟央视/卫视，其余保持原顺序
+
+    2026-10-17：用户反馈"根本看不到外国台"，实际是合并时把境外分组追加到了
+    53 个分组的最后面，电视上要一路往右翻才找得到，等于白放。
+    """
+    blocks = parse_m3u_blocks(text)
+    if not blocks:
+        return text
+    header = text.splitlines()[0].strip() if text.strip() else '#EXTM3U'
+
+    def group_of(extinf):
+        m = re.search(r'group-title="([^"]*)"', extinf)
+        return m.group(1) if m else ''
+
+    def rank(block):
+        g = group_of(block[0])
+        return GROUP_ORDER.index(g) if g in GROUP_ORDER else len(GROUP_ORDER)
+
+    out = [header]
+    for extinf, middle, url in sorted(blocks, key=rank):  # sorted 稳定：同组内保持原顺序
+        out.append(extinf)
+        out.extend(middle)
+        out.append(url)
+    return '\n'.join(out) + '\n'
+
+
+def _probe_stream(url, timeout=4):
+    """单条直播流可达性探测：能拿到 200 且读得到字节就算活"""
+    try:
+        u = idna_url(url)
+        req = urllib.request.Request(u, headers={
+            'User-Agent': 'okhttp/3.12.1',
+            'Accept-Encoding': 'identity',
+        })
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+            return resp.status == 200 and len(resp.read(256)) > 0
+    except Exception:
+        return False
+
+
+def prune_dead_overseas(text, timeout=4, workers=16):
+    """境外频道体检：geo-block / 死链先删掉，别占着分组让电视逐个点都放不出来
+
+    只动境外分组，国内频道一条不碰；若整体可用率低于 30%，判定为本机网络异常，
+    保留原样不动（宁可留着让电视自己试，也不能因为一次断网把好频道全删了）。
+    """
+    blocks = parse_m3u_blocks(text)
+    if not blocks:
+        return text
+    header = text.splitlines()[0].strip() if text.strip() else '#EXTM3U'
+    targets = []
+    for idx, (extinf, _middle, url) in enumerate(blocks):
+        m = re.search(r'group-title="([^"]*)"', extinf)
+        if m and m.group(1) in OVERSEAS_GROUPS:
+            targets.append((idx, url))
+    if not targets:
+        return text
+    alive = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as ex:
+        for (idx, url), ok in zip(targets, ex.map(lambda t: _probe_stream(t[1], timeout), targets)):
+            alive[idx] = ok
+    live_cnt = sum(1 for v in alive.values() if v)
+    ratio = live_cnt / float(len(targets))
+    if ratio < 0.3:
+        log("境外频道体检可用率仅 %.0f%%，疑似本机网络异常，本次不剔除" % (ratio * 100))
+        return text
+    out = [header]
+    for idx, (extinf, middle, url) in enumerate(blocks):
+        if idx in alive and not alive[idx]:
+            continue
+        out.append(extinf)
+        out.extend(middle)
+        out.append(url)
+    log("境外频道体检：%d 条可用 / 共 %d 条，剔除死链 %d 条"
+        % (live_cnt, len(targets), len(targets) - live_cnt))
+    return '\n'.join(out) + '\n'
+
+
 def refresh_live():
     """直播保鲜：拉取主列表 + 并入国外频道，更新本地列表后随下次 push 同步线上"""
     live_path = os.path.join(BASE_DIR, 'live_list.m3u')
@@ -452,6 +547,8 @@ def refresh_live():
         log("直播列表更新失败，保留现有列表")
         return False
     merged = merge_extra_live(content)
+    merged = prune_dead_overseas(merged)
+    merged = reorder_groups(merged)
     old = None
     if os.path.exists(live_path):
         try:
