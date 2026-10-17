@@ -306,14 +306,59 @@ def refresh_live():
     """直播保鲜：拉取最新直播列表（Guovin），成功则更新本地列表，随下次 push 同步线上"""
     live_path = os.path.join(BASE_DIR, 'live_list.m3u')
     src = "https://cdn.jsdelivr.net/gh/Guovin/iptv-api@gd/output/result.m3u"
+    old = None
+    if os.path.exists(live_path):
+        try:
+            with open(live_path, 'r', encoding='utf-8', errors='ignore') as f:
+                old = f.read()
+        except Exception:
+            old = None
     content = fetch(src, limit=LIVE_DOWNLOAD_LIMIT)
     if content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000:
+        # 上游若长期不更新，这里每天都会"成功"下载到同一份内容——必须显式指出，
+        # 否则会像 2026-08 ~ 2026-10 那样静默空转两个月没人发现。
+        if old is not None and content.strip() == old.strip():
+            log("⚠️ 直播列表上游内容与上次完全相同（该上游可能已停更）")
         with open(live_path, 'w', encoding='utf-8') as f:
             f.write(content)
         log("直播列表已保鲜更新 (%d 字节)" % len(content.encode('utf-8')))
         return True
     log("直播列表更新失败，保留现有列表")
     return False
+
+
+def check_public_urls():
+    """对外地址自检：确认 live_source.json 里给电视用的地址真的能下载到 m3u。
+
+    2026-10 曾发生 Gitee 对 live_list.m3u 返回 451（内容违规拦截），
+    电视端一个台都放不出来，而脚本一直报"保鲜成功"——因为从没校验过对外可用性。
+    """
+    path = os.path.join(BASE_DIR, 'live_source.json')
+    if not os.path.exists(path):
+        return True
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            src = json.load(f)
+    except Exception as e:
+        log("自检：读取 live_source.json 失败：%s" % e)
+        return True
+    urls = [it.get('url') for it in (src.get('lives') or [])
+            if isinstance(it, dict) and it.get('url')]
+    if not urls:
+        return True
+    ok = 0
+    for u in urls:
+        content = fetch(u, limit=LIVE_DOWNLOAD_LIMIT)
+        if content and content.lstrip().startswith('#EXTM3U'):
+            ok += 1
+            log("  对外地址可用：%s" % u)
+        else:
+            log("  ⚠️ 对外地址不可用：%s" % u)
+    if ok == 0:
+        notify_change("直播列表所有对外地址都不可用，请检查 live_source.json")
+        return False
+    log("对外地址自检通过：%d/%d 条线路可用" % (ok, len(urls)))
+    return True
 
 
 def main():
@@ -413,6 +458,8 @@ def main():
     validate_kids()
     refresh_live()
     push_to_gitee()
+    # 推送之后再做对外地址自检，确认电视端真的能下载到直播列表
+    check_public_urls()
     log("===== 结束 =====")
 
 
