@@ -264,7 +264,8 @@ def push_to_gitee():
     remote = os.environ.get('GIT_PUSH_REMOTE', 'origin')
     try:
         steps = [
-            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json', 'live_list.m3u', 'live_source.json'],
+            ['git', '-C', BASE_DIR, 'add', 'config', 'config_kids', 'status.json',
+              'live_list.m3u', 'live_source.json', 'live_full.json'],
             ['git', '-C', BASE_DIR, 'commit', '-m', 'auto update %s' % datetime.date.today().isoformat()],
             # 用 HEAD:master 而不是 master：后者推的是本地 master 分支，
             # 一旦本地检出在 main，就会推上去旧内容却返回成功（静默假成功）。
@@ -482,7 +483,8 @@ def check_live_repo():
         log("自检：读取 config 失败：%s" % e)
         return True
     repo_urls = [it.get('url') for it in (cfg.get('urls') or [])
-                 if isinstance(it, dict) and 'live_source' in (it.get('url') or '')]
+                 if isinstance(it, dict) and
+                 ('live_source' in (it.get('url') or '') or 'live_full' in (it.get('url') or ''))]
     if not repo_urls:
         log("自检：config 里没有直播仓库条目")
         return True
