@@ -1,0 +1,59 @@
+name: 影视仓接口自动更新
+
+on:
+  schedule:
+    # 每天 UTC 4点 = 北京时间 12点
+    - cron: '0 4 * * *'
+  workflow_dispatch: # 允许手动触发
+
+# 关键：2023 年之后新建的仓库，GITHUB_TOKEN 默认对 contents 只读。
+# update_sources.py 里的 push_remotes() 会执行 git push origin HEAD:master，
+# 没有这个权限就会静默 403，导致 GitHub 侧的 config / status.json 永远停在旧版本。
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 完整克隆，避免 Gitee 拒绝浅更新 push
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 配置 Git 身份
+        run: |
+          git config user.name "tan-jianlin"
+          git config user.email "auto@ysc.local"
+
+      - name: 运行更新脚本
+        id: update
+        # 脚本在推送 GitHub 失败时会 exit 1。这里不能让它直接中断，
+        # 否则后面推 Gitee 的步骤会被跳过，电视端反而拿不到更新。
+        continue-on-error: true
+        env:
+          # CI 只做直播列表保鲜，不参与点播源可用性判定。
+          # 理由：源能不能在电视上播必须以国内网络为准，美国机房下不了这个结论。
+          # 以前 CI 和本机各判一次，靠"本机比 CI 晚 26 分钟覆盖掉 CI 结果"这个巧合兜底，
+          # 顺序一改就会把国内可用的源误判成死源。（2026-10-20 审计结论）
+          SKIP_VERIFY: "1"
+        run: python update_sources.py
+
+      - name: 推送到 Gitee
+        run: |
+          git config user.name "tan-jianlin"
+          git config user.email "auto@ysc.local"
+          git add -A
+          git diff --staged --quiet || git commit -m "auto update $(date +%Y-%m-%d)"
+          git push https://tan-jianlin:${{ secrets.GITEE_TOKEN }}@gitee.com/tan-jianlin/ysc.git HEAD:master --force
+
+      - name: 汇总结果
+        if: steps.update.outcome == 'failure'
+        run: |
+          echo "::error::更新脚本返回失败，请看上面日志（通常是推送 GitHub 失败或生成列表异常）"
+          exit 1

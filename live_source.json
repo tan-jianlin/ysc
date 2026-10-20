@@ -1,0 +1,43 @@
+{
+  "name": "电视直播",
+  "sites": [],
+  "parses": [],
+  "lives": [
+    {
+      "name": "央视卫视直播",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://cdn.jsdelivr.net/gh/tan-jianlin/ysc@master/live_light.m3u"
+    },
+    {
+      "name": "央视卫视直播(备用1)",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://testingcf.jsdelivr.net/gh/tan-jianlin/ysc@master/live_light.m3u"
+    },
+    {
+      "name": "央视卫视直播(备用2)",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://gcore.jsdelivr.net/gh/tan-jianlin/ysc@master/live_light.m3u"
+    },
+    {
+      "name": "央视卫视直播(备用3)",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://ghfast.top/https://raw.githubusercontent.com/tan-jianlin/ysc/master/live_light.m3u"
+    },
+    {
+      "name": "央视卫视直播(备用4)",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://tan-jianlin.github.io/ysc/live_light.m3u"
+    },
+    {
+      "name": "央视卫视直播(独立托管)",
+      "type": 0,
+      "playerType": 2,
+      "url": "https://paste.rs/W4fag"
+    }
+  ]
+}
