@@ -1,9 +1,9 @@
 {
-  "updated": "2026-10-20 20:50:25",
+  "updated": "2026-10-21 04:22:17",
   "note": "GitHub 之外的最后一条退路；拉取较慢（约 11s/169KB），仅在前四条全挂时使用",
   "urls": {
-    "live_light.m3u": "https://paste.rs/W4fag",
-    "live_source.json": "https://paste.rs/35js8",
-    "config": "https://paste.rs/qlp41"
+    "live_light.m3u": "https://paste.rs/fbMt8",
+    "live_source.json": "https://paste.rs/htE66",
+    "config": "https://paste.rs/hfEud"
   }
 }
