@@ -26,6 +26,18 @@
       "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json"
     },
     {
+      "name": "SVIP📚在线",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/xmbjm/svip/refs/heads/main/svip.json"
+    },
+    {
+      "name": "VIP📚在线",
+      "url": "https://jiekou.netlify.app/svip.json"
+    },
+    {
+      "name": "Clun📚在线",
+      "url": "https://clun.top/box.json"
+    },
+    {
       "name": "王二小备用",
       "url": "https://9280.kstore.space/wex.json"
     },
@@ -48,18 +60,6 @@
     {
       "name": "拾光多仓",
       "url": "http://xmbjm.fh4u.org/dc.txt"
-    },
-    {
-      "name": "小盒子多仓",
-      "url": "http://xhztv.top/dc"
-    },
-    {
-      "name": "动漫专属",
-      "url": "https://www.yingm.cc/dm/dm.json"
-    },
-    {
-      "name": "王二小",
-      "url": "http://tvbox.王二小放牛娃.top"
     }
   ]
 }
