@@ -2,58 +2,58 @@
   "https://szyyds.cn/tv/x.json": {
     "first_seen": "2026-10-20",
     "name": "小马源",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://api.hgyx.vip/hgyx.json": {
     "first_seen": "2026-10-20",
     "name": "HGYX影视",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "http://xhztv.top/4k.json": {
     "first_seen": "2026-10-20",
     "name": "聚玩盒子4K",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://9280.kstore.space/wex.json": {
     "first_seen": "2026-10-20",
     "name": "王二小备用",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://6758.kstore.space/1.json": {
     "first_seen": "2026-10-20",
     "name": "青龙",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json": {
     "first_seen": "2026-10-20",
     "name": "YSC全量源",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json": {
     "first_seen": "2026-10-20",
     "name": "月光宝盒",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "http://ztha.top/TVBox/GYCK.json": {
     "first_seen": "2026-10-20",
     "name": "挺好分享",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "http://home.jundie.top:81/top98.json": {
     "first_seen": "2026-10-20",
@@ -90,9 +90,9 @@
   "http://影视仓.com/": {
     "first_seen": "2026-10-20",
     "name": "影视仓com",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "http://tvbox.王二小放牛娃.top": {
     "first_seen": "2026-10-20",
@@ -105,9 +105,9 @@
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json": {
     "first_seen": "2026-10-20",
     "name": "jsm大而全",
-    "last_ok": "2026-10-25",
+    "last_ok": "2026-10-26",
     "retired": false,
-    "last_try": "2026-10-25"
+    "last_try": "2026-10-26"
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/fty.json": {
     "first_seen": "2026-10-20",
@@ -189,44 +189,50 @@
   "http://52bsj.vip:98/wuai": {
     "first_seen": "2026-10-20",
     "name": "🌝吾爱〔多条线路〕",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "http://9xi4o.tk/0725.json": {
     "first_seen": "2026-10-20",
     "name": "4K云盘〔多条线路〕",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "https://agit.ai/nbwzlyd/xiaopingguo/raw/branch/master/xiaopingguo/xiaopingguo.json": {
     "first_seen": "2026-10-20",
     "name": "🍎小苹果〔多条线路〕",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "https://agit.ai/66666/mao/raw/branch/master/00/000.m3u8": {
     "first_seen": "2026-10-20",
     "name": "🐹分享者线路",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "https://raw.iqiq.io/kebedd69/TVbox-interface/main/%E7%94%9C%E8%9C%9C.json": {
     "first_seen": "2026-10-20",
     "name": "💎甜蜜线路",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "https://raw.iqiq.io/liu673cn/box/main/m.json": {
     "first_seen": "2026-10-20",
     "name": "🍸老刘备〔多条线路〕",
-    "last_try": "2026-10-20",
-    "last_fail": "2026-10-20",
-    "probe_fail": 1
+    "last_try": "2026-10-26",
+    "last_fail": "2026-10-26",
+    "probe_fail": 2,
+    "retired": true
   },
   "http://js.134584.xyz/json/pp87.json": {
     "first_seen": "2026-10-20",
@@ -450,8 +456,8 @@
   "https://gh-proxy.com/https://raw.githubusercontent.com/xmbjm/svip/refs/heads/main/svip.json": {
     "first_seen": "2026-10-22",
     "name": "SVIP📚在线",
-    "last_try": "2026-10-25",
-    "last_ok": "2026-10-25",
+    "last_try": "2026-10-26",
+    "last_ok": "2026-10-26",
     "retired": false
   },
   "https://gh.jasonzeng.dev/https://raw.githubusercontent.com/xmbjm/svip/refs/heads/main/svip.json": {
@@ -464,8 +470,8 @@
   "https://jiekou.netlify.app/svip.json": {
     "first_seen": "2026-10-22",
     "name": "VIP📚在线",
-    "last_try": "2026-10-25",
-    "last_ok": "2026-10-25",
+    "last_try": "2026-10-26",
+    "last_ok": "2026-10-26",
     "retired": false
   },
   "http://miqk.cc/小米/DEMO.json": {
@@ -506,8 +512,8 @@
   "https://clun.top/box.json": {
     "first_seen": "2026-10-23",
     "name": "Clun📚在线",
-    "last_try": "2026-10-25",
-    "last_ok": "2026-10-25",
+    "last_try": "2026-10-26",
+    "last_ok": "2026-10-26",
     "retired": false
   },
   "http://ok321.top/ok": {
@@ -527,8 +533,8 @@
   "https://gh-proxy.com/raw.githubusercontent.com/yw88075/tvbox/main/yw.json": {
     "first_seen": "2026-10-24",
     "name": "心魔📚在线",
-    "last_try": "2026-10-25",
-    "last_ok": "2026-10-25",
+    "last_try": "2026-10-26",
+    "last_ok": "2026-10-26",
     "retired": false
   },
   "http://2883.kstore.space/nzk/nzk0722.json": {
@@ -541,8 +547,8 @@
   "http://szyyds.cn/tv/x.json": {
     "first_seen": "2026-10-24",
     "name": "小马📚在线",
-    "last_try": "2026-10-25",
-    "last_ok": "2026-10-25",
+    "last_try": "2026-10-26",
+    "last_ok": "2026-10-26",
     "retired": false
   },
   "https://fmbox.cc": {
