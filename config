@@ -30,10 +30,6 @@
       "url": "https://gh-proxy.com/https://raw.githubusercontent.com/xmbjm/svip/refs/heads/main/svip.json"
     },
     {
-      "name": "VIP📚在线",
-      "url": "https://jiekou.netlify.app/svip.json"
-    },
-    {
       "name": "Clun📚在线",
       "url": "https://clun.top/box.json"
     },
@@ -60,6 +56,10 @@
     {
       "name": "青龙",
       "url": "https://6758.kstore.space/1.json"
+    },
+    {
+      "name": "🚀高天流云",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"
     }
   ]
 }
