@@ -1,0 +1,2367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f4f6fa">
+<meta name="format-detection" content="telephone=no">
+<title>乐透数据观察 · 双色球 / 大乐透</title>
+<style>
+:root{
+  --bg:#f4f6fa; --card:#ffffff; --ink:#1b2230; --ink2:#3d4759; --muted:#6b7488;
+  --line:#e4e8f2; --line2:#eef1f7;
+  --red:#d93a3a; --red-soft:#fdecec; --red-line:#f3c8c8;
+  --blue:#2a6fd6; --blue-soft:#eaf1fd; --blue-line:#c6d9f7;
+  --warn-bg:#fff6e5; --warn-ink:#8a5a00; --warn-line:#f2dfb4;
+  --ok:#1f8a5b; --radius:14px;
+  --shadow:0 1px 2px rgba(27,34,48,.05), 0 6px 18px rgba(27,34,48,.05);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
+       "Hiragino Sans GB","Microsoft YaHei",Roboto,sans-serif;
+  padding-bottom:calc(64px + env(safe-area-inset-bottom));
+  overflow-x:hidden;
+}
+.wrap{max-width:480px;margin:0 auto;padding:0 12px}
+h1,h2,h3,p,ol,ul{margin:0}
+ol,ul{padding-left:1.1em}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.mono{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+
+/* ---------- 顶栏 ---------- */
+.hdr{padding:16px 4px 8px}
+.hdr h1{font-size:19px;letter-spacing:.2px;display:flex;align-items:center;gap:8px}
+.hdr .sub{font-size:12px;color:var(--muted);margin-top:3px}
+.dot-live{width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block}
+.dot-live.stale{background:#d98a00}
+
+/* ---------- 卡片 ---------- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      box-shadow:var(--shadow);padding:14px;margin-bottom:12px}
+.card-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.card-h h2{font-size:15px}
+.card-h .hint{font-size:11px;color:var(--muted)}
+.sec-t{font-size:12px;color:var(--muted);margin:14px 4px 6px;letter-spacing:.3px}
+
+/* ---------- 声明横幅 ---------- */
+.banner{background:var(--warn-bg);border:1px solid var(--warn-line);color:var(--warn-ink);
+        border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.5;margin-bottom:10px}
+.stamp{font-size:11.5px;color:var(--muted);margin:0 4px 12px;display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------- 号码球 ---------- */
+.balls{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ball{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;
+      width:30px;height:30px;font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+.ball.hero{width:34px;height:34px;font-size:14.5px;box-shadow:0 2px 6px rgba(0,0,0,.09)}
+.ball.red{background:var(--red);color:#fff}
+.ball.blue{background:var(--blue);color:#fff}
+.ball.soft-red{background:var(--red-soft);color:var(--red);border:1px solid var(--red-line)}
+.ball.soft-blue{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line)}
+.ball.soft-grey{background:#f1f3f9;color:#5c6577;border:1px solid var(--line)}
+.ball.chip{width:34px;height:34px;font-size:12.5px}
+.sep{color:var(--muted);font-size:12px;padding:0 2px}
+
+/* ---------- 今日卡片 ---------- */
+.gc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}
+.gc-name{font-size:16px;font-weight:700;letter-spacing:.3px}
+.gc-issue{font-size:12px;color:var(--muted)}
+.gc-date{font-size:12px;color:var(--muted);margin-bottom:12px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.tag{font-size:11px;padding:3px 8px;border-radius:999px;background:#f1f3f9;color:var(--ink2);
+     border:1px solid var(--line)}
+.tag.red{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.prof{font-size:11.5px;color:var(--muted);margin-top:8px}
+details.why{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+details.why summary{font-size:12.5px;color:var(--ink2);cursor:pointer;list-style:none;
+  display:flex;align-items:center;justify-content:space-between}
+details.why summary::-webkit-details-marker{display:none}
+details.why summary::after{content:"展开";font-size:11px;color:var(--muted)}
+details.why[open] summary::after{content:"收起"}
+.reasons{margin-top:8px;font-size:12px;color:var(--ink2);line-height:1.6}
+.reasons li{margin-bottom:5px}
+.gc-foot{display:flex;align-items:center;gap:8px;margin-top:12px}
+
+/* ---------- 上期开奖 ---------- */
+.ld{padding:11px 0;border-top:1px dashed var(--line)}
+.ld:first-child{padding-top:0;border-top:0}
+.ld:last-child{padding-bottom:0}
+.ld-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ld-game{font-size:14px;font-weight:700;letter-spacing:.2px}
+.ld-issue{font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ld-date{font-size:11.5px;color:var(--muted);margin:3px 0 9px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.ld-date .today{color:var(--red);font-weight:600}
+.ld .balls{gap:5px}
+.ball.sm{width:27px;height:27px;font-size:11.5px}
+.ld-cmp{font-size:12px;color:var(--ink2);margin-top:10px;padding:7px 9px;border-radius:9px;
+        background:#f7f8fc;line-height:1.6}
+.ld-cmp b{color:var(--ink)}
+.ld-win{color:var(--red)}
+.ld-no{color:var(--muted)}
+.btn{border-radius:10px;padding:10px 14px;font-size:13px;font-weight:600;min-height:44px;
+     display:inline-flex;align-items:center;justify-content:center;gap:6px;
+     background:#f1f3f9;color:var(--ink2);border:1px solid var(--line)}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink)}
+.btn.ghost{background:#fff}
+.btn.sm{padding:7px 10px;font-size:12px;min-height:36px;border-radius:9px}
+.btn:disabled{opacity:.5}
+
+/* ---------- 分段控件 ---------- */
+.seg{display:flex;background:#eceff6;border-radius:10px;padding:3px;gap:3px;margin-bottom:10px}
+.seg button{flex:1;padding:7px 4px;border-radius:8px;font-size:13px;color:var(--ink2);font-weight:500}
+.seg button.on{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(27,34,48,.12)}
+.seg.tiny button{font-size:12px;padding:6px 2px}
+
+/* ---------- 图表 ---------- */
+.chart{width:100%}
+.chart svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:4px;flex-wrap:wrap}
+.legend i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+
+/* ---------- 分布条 ---------- */
+.drow{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px}
+.dlab{width:46px;color:var(--muted);flex:none;font-variant-numeric:tabular-nums}
+.dbar{flex:1;height:8px;background:#eef1f7;border-radius:4px;overflow:hidden}
+.dbar i{display:block;height:100%;background:var(--red);border-radius:4px}
+.dbar i.blue{background:var(--blue)}
+.dbar i.grey{background:#a9b3c8}
+.dval{width:52px;text-align:right;color:var(--ink2);flex:none;font-variant-numeric:tabular-nums}
+
+/* ---------- 冷热榜 ---------- */
+.hotcold{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hc{background:#fbfcfe;border:1px solid var(--line2);border-radius:10px;padding:9px}
+.hc h3{font-size:11.5px;color:var(--muted);margin-bottom:7px;font-weight:600;letter-spacing:.4px}
+.hc .balls{gap:5px}
+.hc .ball{width:29px;height:29px;font-size:12px}
+
+/* ---------- 表格 ---------- */
+.tbl-wrap{max-height:270px;overflow:auto;border:1px solid var(--line2);border-radius:10px;
+          -webkit-overflow-scrolling:touch}
+table.om{width:100%;border-collapse:collapse;font-size:12px}
+table.om th{position:sticky;top:0;background:#f7f9fc;color:var(--muted);font-weight:600;
+            font-size:11px;padding:7px 8px;text-align:right;border-bottom:1px solid var(--line)}
+table.om th:first-child{text-align:left}
+table.om td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--line2);
+            font-variant-numeric:tabular-nums;color:var(--ink2)}
+table.om td:first-child{text-align:left;font-weight:600;color:var(--ink)}
+table.om tr:last-child td{border-bottom:0}
+.scroll-hint{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* ---------- 走势矩阵 ---------- */
+.matrix-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+             border:1px solid var(--line2);border-radius:10px;background:#fff}
+table.mx{border-collapse:separate;border-spacing:0;font-size:10px;table-layout:fixed}
+table.mx th,table.mx td{padding:0;text-align:center;font-weight:400;overflow:hidden}
+table.mx thead th{background:#f7f9fc;color:var(--muted);font-size:9px;height:20px;
+                  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:3}
+table.mx thead th.iss{text-align:left;padding-left:6px;z-index:4}
+table.mx td.cell{height:15px;position:relative}
+table.mx td.hit i{display:block;width:7px;height:7px;border-radius:50%;background:var(--red);
+                  margin:0 auto;position:relative;z-index:1}
+table.mx td.lnk::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:2px;
+                        margin-left:-1px;background:#e6a3a3;z-index:0}
+table.mx td.lnk-start::before{top:50%}
+table.mx td.lnk-end::before{bottom:50%}
+table.mx td.iss{position:sticky;left:0;background:#fff;text-align:left;padding-left:6px;
+                font-size:9.5px;color:var(--muted);z-index:2;border-right:1px solid var(--line2)}
+table.mx td.tl{font-variant-numeric:tabular-nums;color:var(--ink2);background:#fff;font-size:9.5px}
+table.mx tbody tr:nth-child(even) td{background:#fcfdff}
+table.mx tbody tr:nth-child(even) td.iss{background:#fcfdff}
+
+/* ---------- 胆拖选择器 ---------- */
+.pick-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.pick-grid button{aspect-ratio:1/1;border-radius:50%;border:1px solid var(--line);
+  background:#fff;color:var(--ink2);font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;
+  display:flex;align-items:center;justify-content:center;min-height:42px;transition:transform .06s}
+.pick-grid button:active{transform:scale(.94)}
+.pick-grid button.tuo{background:var(--red-soft);color:var(--red);border-color:var(--red-line)}
+.pick-grid button.dan{background:var(--red);color:#fff;border:2px solid #8f1d1d}
+.pick-grid button.btuo{background:var(--blue-soft);color:var(--blue);border-color:var(--blue-line)}
+.pick-grid button.bdan{background:var(--blue);color:#fff;border:2px solid #17458c}
+.mode-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.mode-row .btn{flex:1;min-width:90px}
+.btn.on-mode{background:var(--ink);color:#fff;border-color:var(--ink)}
+.dt-stat{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.dt-num{background:#fbfcfe;border:1px solid var(--line2);border-radius:10px;padding:10px;text-align:center}
+.dt-num b{display:block;font-size:22px;font-variant-numeric:tabular-nums}
+.dt-num span{font-size:11px;color:var(--muted)}
+.msg{font-size:12px;line-height:1.6;color:var(--warn-ink);background:var(--warn-bg);
+     border:1px solid var(--warn-line);border-radius:9px;padding:8px 10px;margin-top:10px}
+.msg.ok{color:var(--ok);background:#eefaf3;border-color:#c6e9d6}
+.msg.err{color:#a12a2a;background:var(--red-soft);border-color:var(--red-line)}
+
+/* ---------- 依据库（wiki） ---------- */
+.kv{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)}
+.kv span{font-size:13px;color:var(--ink2)}
+.kv b{font-size:13px;color:var(--ink)}
+.kv b.red{color:var(--red)}
+.trow{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:8px;font-size:13px}
+.trow:nth-child(odd){background:#f6f8fc}
+.tname{color:var(--ink2)}
+.tval{color:var(--muted);font-size:12px}
+.ind{display:block;padding:9px 0;border-bottom:1px solid var(--line)}
+.ind b{display:block;font-size:13px;color:var(--ink)}
+.ind span{display:block;font-size:12px;color:var(--muted);line-height:1.6;margin-top:3px}
+.why-body{font-size:12px;color:var(--ink2);line-height:1.65;padding:6px 0 2px}
+.why-no{color:#a12a2a;background:var(--red-soft);border:1px solid var(--red-line);border-radius:8px;padding:7px 9px;margin-top:6px;line-height:1.6}
+
+/* ---------- 模拟 ---------- */
+.sim-grp{margin-bottom:10px}
+.sim-lab{font-size:11.5px;color:var(--ink2);margin-bottom:3px;font-weight:600}
+.prog{height:6px;background:#eef1f7;border-radius:3px;overflow:hidden;margin:8px 0}
+.prog i{display:block;height:100%;width:0;background:var(--ink);transition:width .12s linear}
+.prog.red i{background:var(--red)}
+
+/* ---------- 奖级表 ---------- */
+table.tier{width:100%;border-collapse:collapse;font-size:11.5px}
+table.tier th{background:#f7f9fc;color:var(--muted);font-size:10.5px;font-weight:600;
+  padding:6px 7px;text-align:left;border-bottom:1px solid var(--line)}
+table.tier th.amt{text-align:right}
+table.tier td{padding:6px 7px;border-bottom:1px solid var(--line2);color:var(--ink2);
+  vertical-align:top;line-height:1.45}
+table.tier tr:last-child td{border-bottom:0}
+table.tier td:first-child{white-space:nowrap;color:var(--ink);font-weight:600;width:52px}
+table.tier td.amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;
+  color:var(--ink);font-weight:600;width:66px}
+table.tier td.amt .pn{display:block;font-weight:400;font-size:9.5px;color:var(--muted)}
+.tier-meta{font-size:11px;color:var(--muted);line-height:1.7;margin-top:8px}
+.tier-meta b{color:var(--ink2)}
+
+/* ---------- 关于 ---------- */
+.facts{font-size:12.5px;color:var(--ink2);line-height:1.7;padding-left:1.15em}
+.facts li{margin-bottom:6px}
+.frow{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.frow label{font-size:12.5px;color:var(--ink2);width:92px;flex:none}
+.frow input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:9px;
+  font-size:14px;background:#fff;color:var(--ink);font-variant-numeric:tabular-nums}
+.frow input:focus{outline:none;border-color:var(--ink2)}
+.bar-lab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:8px}
+.egg{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fbfcfe}
+.egg summary{cursor:pointer;list-style:none;font-size:13.5px;font-weight:600;
+  display:flex;align-items:center;gap:7px}
+.egg summary::-webkit-details-marker{display:none}
+.badge{font-size:10px;padding:1px 6px;border-radius:999px;background:#f2e9ff;color:#6b3fbf;
+  border:1px solid #e0d0fb;font-weight:600}
+.egg-body{margin-top:10px;font-size:12px;color:var(--ink2)}
+.egg-out{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.egg-item{background:#fff;border:1px solid var(--line2);border-radius:9px;padding:8px 10px}
+.egg-item span{display:block;font-size:10.5px;color:var(--muted)}
+.egg-item b{font-size:14px}
+.foot{font-size:11px;color:var(--muted);line-height:1.7;margin:14px 4px 20px}
+.foot a{color:var(--muted)}
+
+/* ---------- 保底页 ---------- */
+table.gt{width:100%;border-collapse:collapse;font-size:11.5px}
+table.gt th{background:#f7f9fc;color:var(--muted);font-size:10px;font-weight:600;
+  padding:6px 4px;border-bottom:1px solid var(--line2);text-align:right;white-space:nowrap}
+table.gt th:first-child{text-align:left}
+table.gt td{padding:7px 4px;border-bottom:1px solid var(--line2);text-align:right;
+  color:var(--ink2);white-space:nowrap;font-variant-numeric:tabular-nums}
+table.gt td:first-child{text-align:left;color:var(--ink);font-weight:600}
+table.gt tr:last-child td{border-bottom:0}
+table.gt td small{display:block;font-size:9.5px;color:var(--muted);font-weight:400}
+table.gt .ge{color:var(--muted);font-weight:400;margin-right:1px}
+table.gt td.rate{color:var(--red);font-weight:600}
+table.gt .tagcheap{display:inline-block;font-size:9px;padding:0 4px;border-radius:4px;
+  background:#fff3e6;color:#a35b00;border:1px solid #f3ddc2;margin-left:3px;font-weight:600}
+.gbox{border-radius:10px;padding:11px 12px;font-size:12.5px;line-height:1.7;margin-top:10px}
+.gbox.ok{background:#f3f8f4;border:1px solid #d6e8db}
+.gbox.warn{background:var(--warn-bg);border:1px solid var(--warn-line)}
+.gbox>b{display:block;font-size:13px;margin-bottom:3px}
+.gline{display:flex;justify-content:space-between;gap:10px;font-size:12px;color:var(--ink2);
+  border-top:1px dashed var(--line2);padding:4px 0}
+.gline b{color:var(--ink);font-variant-numeric:tabular-nums}
+.gline b.bad{color:var(--red)}
+.gmath{background:#fbfcfe;border:1px solid var(--line2);border-radius:10px;padding:11px 12px;
+  margin-top:9px;font-size:12.5px;line-height:1.95;color:var(--ink2);
+  font-variant-numeric:tabular-nums}
+.gthree{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.gthree div{background:#fbfcfe;border:1px solid var(--line2);border-radius:9px;
+  padding:9px 4px;text-align:center}
+.gthree span{display:block;font-size:10px;color:var(--muted);margin-bottom:1px}
+.gthree b{font-size:14px;font-variant-numeric:tabular-nums}
+.gthree b.bad{color:var(--red)}
+
+/* ---------- Tab 栏 ---------- */
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(255,255,255,.94);
+  backdrop-filter:saturate(180%) blur(12px);-webkit-backdrop-filter:saturate(180%) blur(12px);
+  border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+.tabbar-in{max-width:480px;margin:0 auto;display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tabbar button{flex:1 1 0;min-width:46px}
+.tabbar button{flex:1;min-height:52px;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:2px;color:var(--muted);font-size:10.5px;padding:6px 0 5px}
+.tabbar button svg{width:20px;height:20px;display:block}
+.tabbar button.on{color:var(--ink)}
+.tabbar button.on svg{color:var(--red)}
+
+/* ---------- Toast ---------- */
+#toast{position:fixed;left:50%;bottom:calc(78px + env(safe-area-inset-bottom));
+  transform:translate(-50%,10px);background:rgba(27,34,48,.92);color:#fff;font-size:12.5px;
+  padding:9px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:.2s;z-index:99}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+
+.view{display:none}
+.view.on{display:block}
+@media (max-width:359px){
+  .ball{width:27px;height:27px;font-size:12px}
+  .ball.hero{width:31px;height:31px;font-size:13px}
+}
+
+/* ---------- 新功能：选号 / 核对 ---------- */
+.excl-row{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.excl-row .btn{flex:1;min-width:120px}
+.hv{border-top:1px dashed var(--line)}
+.hv:first-child{border-top:0}
+.hv-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:9px 0 6px}
+.hv-iss{font-size:13px;font-weight:700}
+.hv-date{font-size:11px;color:var(--muted)}
+.hv .balls{gap:5px}
+.hv .ball.sm{width:27px;height:27px;font-size:11.5px}
+.gen{border:1px solid var(--line2);border-radius:10px;padding:9px 10px;margin-bottom:8px;background:#fff}
+.gen .balls{gap:5px;margin-bottom:6px}
+.gen .ball.sm{width:27px;height:27px;font-size:11.5px}
+.gen-meta{font-size:11px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.gen-ok{color:var(--ok);font-weight:600}
+.sim-lab{display:block;font-size:12px;color:var(--ink2);font-weight:600;margin:12px 0 6px}
+.mini-in{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.mini-in label{font-size:12px;color:var(--ink2);min-width:60px}
+.mini-in input,.frow.sm input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;
+  font-size:13px;font-variant-numeric:tabular-nums;background:#fff;color:var(--ink)}
+.mini-in input{width:64px}
+.mini-in input:focus,.frow.sm input:focus{outline:none;border-color:var(--ink2)}
+.zone-min{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.zone-min input{width:46px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;
+  font-size:13px;text-align:center;background:#fff;color:var(--ink)}
+.zone-min span{font-size:12px;color:var(--muted)}
+.chk-sum{font-size:13px;color:var(--ink2);line-height:1.8}
+.chk-sum b{font-variant-numeric:tabular-nums}
+.tier-row{display:flex;justify-content:space-between;font-size:12.5px;padding:4px 0;
+  border-top:1px dashed var(--line2)}
+.tier-row:first-child{border-top:0}
+.divider{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--muted);
+  text-transform:none;font-weight:600}
+.divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line2)}
+.coll-row{display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:6px 0;border-top:1px dashed var(--line2)}
+.coll-row:first-child{border-top:0}
+.cmp-tbl{width:100%;border-collapse:collapse;margin-top:4px;font-size:12.5px}
+.cmp-tbl th,.cmp-tbl td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line2);vertical-align:top}
+.cmp-tbl th{color:var(--muted);font-weight:600}
+.cmp-tbl tbody tr:last-child td{border-bottom:0}
+.btn.tiny{padding:4px 10px;font-size:12px;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hdr">
+    <h1>乐透数据观察<span class="dot-live" id="liveDot"></span></h1>
+    <p class="sub">双色球 / 大乐透 历史开奖的<b>描述性统计</b> · 不预测、不建议</p>
+  </header>
+
+  <main>
+    <section class="view on" id="view-today"></section>
+    <section class="view" id="view-stats"></section>
+    <section class="view" id="view-trend"></section>
+    <section class="view" id="view-dantuo"></section>
+    <section class="view" id="view-sim"></section>
+    <section class="view" id="view-guard"></section>
+    <section class="view" id="view-about"></section>
+    <section class="view" id="view-pick"></section>
+    <section class="view" id="view-check"></section>
+    <section class="view" id="view-wiki"></section>
+  </main>
+</div>
+
+<nav class="tabbar">
+  <div class="tabbar-in" id="tabbar">
+    <button data-act="tab" data-tab="today" class="on">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5l2.3 4.8 5.2.7-3.8 3.7.9 5.3-4.6-2.5-4.6 2.5.9-5.3L4.5 9l5.2-.7z"/></svg>
+      今日</button>
+    <button data-act="tab" data-tab="stats">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 20v-6M12 20V4M19 20v-9"/></svg>
+      统计</button>
+    <button data-act="tab" data-tab="trend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 16l5-6 4 3.5 3-5 6 7"/><path d="M3 20h18"/></svg>
+      走势</button>
+    <button data-act="tab" data-tab="dantuo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M5 6h.01M12 6h.01M19 6h.01M5 12h.01M12 12h.01M19 12h.01M5 18h.01M12 18h.01M19 18h.01"/></svg>
+      胆拖</button>
+    <button data-act="tab" data-tab="sim">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4"/><path d="M8 8h.01M16 8h.01M12 12h.01M8 16h.01M16 16h.01" stroke-width="2.4" stroke-linecap="round"/></svg>
+      模拟</button>
+    <button data-act="tab" data-tab="guard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l6.8 2.9v5.6c0 4.1-2.8 7.3-6.8 8.4-4-1.1-6.8-4.3-6.8-8.4V6.1z"/><path d="M9.2 12.1l2.1 2.1 3.6-3.9"/></svg>
+      保底</button>
+    <button data-act="tab" data-tab="about">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h.01"/></svg>
+      关于</button>
+    <button data-act="tab" data-tab="pick">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h9M17 7h3M4 12h3M11 12h9M4 17h7M15 17h5"/><circle cx="14.5" cy="7" r="1.8"/><circle cx="7.5" cy="12" r="1.8"/><circle cx="12.5" cy="17" r="1.8"/></svg>
+      选号</button>
+    <button data-act="tab" data-tab="check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.3-4.3"/><circle cx="11" cy="11" r="7"/><path d="M8 11l2 2 3-3"/></svg>
+      核对</button>
+    <button data-act="tab" data-tab="wiki">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M8 7h9M8 11h9M8 15h5"/></svg>
+      依据</button>
+  </div>
+</nav>
+
+<div id="toast"></div>
+
+<script>window.__LOTTERY__=/*__LOTTERY_DATA__*/;</script>
+<script>
+(function(){
+"use strict";
+
+var D = window.__LOTTERY__;
+var RED = "#d93a3a", BLUE = "#2a6fd6", GREY = "#c3cbe0";
+
+var S = {
+  tab: "today",
+  statGame: "ssq", statZone: "front",
+  trendGame: "ssq", trendSpan: 30,
+  dtGame: "ssq", dtMode: "tuo",
+  dt: {
+    ssq: {dan: [], tuo: [], back: []},
+    dlt: {dan: [], tuo: [], back: []}
+  },
+  simGame: "ssq", simDone: false,
+  guardGame: "ssq", guardBudget: 0,
+  exclude: {ssq: false, dlt: false},
+  roll: {ssq: 0, dlt: 0},
+  shown: {ssq: {front: [], back: []}, dlt: {front: [], back: []}},
+  todayCfg: {
+    ssq: {odd: "any", big: "any", zone: [0, 0, 0], sumMin: "", sumMax: ""},
+    dlt: {odd: "any", big: "any", zone: [0, 0, 0], sumMin: "", sumMax: ""}
+  },
+  custom: {ssq: false, dlt: false},
+  pickGame: "ssq", pickExcl: false, pickOdd: "any", pickBig: "any",
+  pickBackOdd: "any", pickBackBig: "any",
+  pickCount: 5, pickSeed: {ssq: 1, dlt: 1},
+  checkGame: "ssq",
+  collections: loadCollections(), collGame: "ssq", collView: null,
+  wikiGame: "ssq"
+};
+
+/* ---------------- 基础工具 ---------------- */
+function pad(n){ return (n < 10 ? "0" : "") + n; }
+function q(sel, root){ return (root || document).querySelector(sel); }
+function qa(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+function esc(s){
+  return String(s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c];
+  });
+}
+function fmtP(p){
+  if (p >= 0.0001) return p.toFixed(4);
+  return p.toExponential(2).replace("e", "e");
+}
+function fmtInt(n){ return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ","); }
+function toast(msg){
+  var t = q("#toast");
+  t.textContent = msg;
+  t.className = "on";
+  clearTimeout(toast._t);
+  toast._t = setTimeout(function(){ t.className = ""; }, 1600);
+}
+/* 组合数 C(n,k)：胆拖注数实时计算，公式简单，允许在前端实现 */
+function comb(n, k){
+  if (k < 0 || n < 0 || k > n) return 0;
+  k = Math.min(k, n - k);
+  var r = 1;
+  for (var i = 1; i <= k; i++) r = r * (n - k + i) / i;
+  return Math.round(r);
+}
+function ballsHTML(nums, cls){
+  return nums.map(function(n){
+    return '<span class="ball ' + cls + '">' + pad(n) + "</span>";
+  }).join("");
+}
+
+/* ---------------- Tab 1 今日 ---------------- */
+function niceDate(s){
+  var p = String(s).split("-");
+  if (p.length < 3) return s;
+  return Number(p[1]) + "月" + Number(p[2]) + "日";
+}
+
+function cfgFront(key){
+  return {zones: D[key].front.zones.map(function(z){ return [z.lo, z.hi]; })};
+}
+function profileOf(nums, cfg){
+  var odd = nums.filter(function(v){ return v % 2 === 1; }).length;
+  var zones = cfg.zones.map(function(z){
+    return nums.filter(function(v){ return v >= z[0] && v <= z[1]; }).length;
+  });
+  var sum = nums.reduce(function(a, b){ return a + b; }, 0);
+  return {odd: odd, even: nums.length - odd, zones: zones, sum: sum};
+}
+function reasonsOf(key, nums){
+  var g = D[key], fz = g.front, mean = fz.meanFreq;
+  var high = nums.filter(function(v){ return fz.freq[v] >= mean * 1.1; }).length;
+  var low = nums.filter(function(v){ return fz.freq[v] < mean; }).length;
+  var p = profileOf(nums, cfgFront(key));
+  var exclNote = S.exclude[key] ? "已排除上一期开出的 7 个号码。" : "";
+  return [
+    high + " 个号码历史出现次数不低于均值 " + mean.toFixed(1) + " 的 1.1 倍，" +
+      low + " 个低于均值，权重按 1/(1+z²) 向均衡回归。",
+    "结构复核通过：奇偶 " + p.odd + ":" + p.even + "，三区 " + p.zones.join("-") +
+      "，和值 " + p.sum + " 落在历史 5%~95% 区间 " + Math.round(fz.sumDist.p5) +
+      "~" + Math.round(fz.sumDist.p95) + "。" + exclNote,
+    "客户端实时加权随机抽样，与开奖结果无关，不含预测成分。"
+  ];
+}
+function gameCardHTML(key){
+  var t = D.today[key];
+  var g = D[key];
+  var shown = S.shown[key];
+  var front = ballsHTML(shown.front, "hero red");
+  var back = ballsHTML(shown.back, "hero blue");
+  var reasons = reasonsOf(key, shown.front).map(function(r){ return "<li>" + esc(r) + "</li>"; }).join("");
+  var p = profileOf(shown.front, cfgFront(key));
+  return '' +
+  '<div class="card">' +
+    '<div class="gc-head">' +
+      '<span class="gc-name">' + esc(g.game) + "</span>" +
+      '<span class="gc-issue">第 ' + esc(t.nextIssue) + " 期</span>" +
+    "</div>" +
+    '<div class="gc-date">预计 ' + esc(niceDate(t.nextDrawDate)) + " " +
+      esc(t.nextDrawWeekday) + " · " + esc(t.drawHint) + "</div>" +
+    '<div class="balls">' + front +
+      (back ? '<span class="sep">+</span>' + back : "") + "</div>" +
+    '<div class="tag-row">' +
+      '<span class="tag red">' + (S.custom[key] ? "自定义条件" : esc(t.strategy)) + "</span>" +
+      '<span class="tag">奇偶 ' + p.odd + ":" + p.even + "</span>" +
+      '<span class="tag">三区 ' + p.zones.join("-") + "</span>" +
+      '<span class="tag">和值 ' + p.sum + "</span>" +
+    "</div>" +
+    '<details class="why"><summary>依据（3 条）</summary>' +
+      '<ol class="reasons">' + reasons + "</ol></details>" +
+    '<div class="gc-foot">' +
+      '<button class="btn primary" data-act="copy" data-game="' + key + '">复制号码</button>' +
+      '<span class="prof">上期 ' + esc(t.lastIssue) + (S.exclude[key] ? " · 已排除上期" : "") + "</span>" +
+    "</div>" +
+  "</div>";
+}
+
+function lastDrawHTML(key){
+  var t = D.today[key];
+  var ld = t && t.lastDraw;
+  if (!ld) return "";
+  var shown = S.shown[key];
+  var hf = 0, hb = 0, i;
+  for (i = 0; i < shown.front.length; i++) if (ld.front.indexOf(shown.front[i]) >= 0) hf++;
+  for (i = 0; i < shown.back.length; i++) if (ld.back.indexOf(shown.back[i]) >= 0) hb++;
+  var prizeNow = judgePrize(key, hf, hb);
+  var frontLabel = key === "ssq" ? "红" : "前区";
+  var dateCls = ld.daysAgo === 0 ? "today" : "";
+  var hitHtml = "今日号码对照：命中 <b>" + hf + "</b> " + frontLabel +
+    " + <b>" + hb + "</b> " + esc(ld.backLabel);
+  var pz = prizeNow
+    ? '<b class="ld-win">→ ' + esc(prizeNow) + "（" +
+      (PRIZE_AMT[key][prizeNow] != null ? fmtInt(PRIZE_AMT[key][prizeNow]) + " 元" : "浮动奖金") + "）</b>"
+    : '<span class="ld-no">→ 未中奖</span>';
+  return '<div class="ld">' +
+      '<div class="ld-top"><span class="ld-game">' + esc(D[key].game) + "</span>" +
+        '<span class="ld-issue">第 ' + esc(ld.issue) + " 期</span></div>" +
+      '<div class="ld-date"><span class="' + dateCls + '">' + esc(niceDate(ld.date)) +
+        " " + esc(ld.weekday) + "</span><span>·</span><span>" + esc(ld.relative) +
+        "</span></div>" +
+      '<div class="balls">' + ballsHTML(ld.front, "sm red") +
+        '<span class="sep">+</span>' + ballsHTML(ld.back, "sm blue") + "</div>" +
+      '<div class="ld-cmp">' + hitHtml + " " + pz + "</div>" +
+    "</div>";
+}
+
+function lastDrawCardHTML(){
+  var a = lastDrawHTML("ssq"), b = lastDrawHTML("dlt");
+  if (!a && !b) return "";
+  return '<div class="card"><div class="card-h"><h2>上期开奖</h2>' +
+    '<span class="hint">最近一期</span></div>' + a + b +
+    '<p class="scroll-hint">上期号码只用于回看命中情况，与今日号码的产生没有关系——' +
+    "今日号码是独立抽样得到的，不受上期结果影响。</p></div>";
+}
+
+function cfgActive(key){
+  var c = S.todayCfg[key];
+  return c.odd !== "any" || c.big !== "any" ||
+    c.zone[0] > 0 || c.zone[1] > 0 || c.zone[2] > 0 ||
+    c.sumMin !== "" || c.sumMax !== "";
+}
+function ratioBtnsHTML(act, key, cur, pick){
+  var presets = [["any", "任意"]];
+  for (var o = 0; o <= pick; o++) presets.push([o + ":" + (pick - o), o + ":" + (pick - o)]);
+  return '<div class="seg tiny" style="flex-wrap:wrap">' + presets.map(function(p){
+    return '<button data-act="' + act + '" data-g="' + key + '" data-v="' + p[0] +
+      '" class="' + (cur === p[0] ? "on" : "") + '" style="flex:0 0 auto;padding:6px 10px">' + p[1] + "</button>";
+  }).join("") + "</div>";
+}
+function todayCfgDetailsHTML(key){
+  var g = D[key], c = S.todayCfg[key], pick = g.front.pick;
+  var act = cfgActive(key);
+  return '<details class="why"' + (act ? " open" : "") + '>' +
+    '<summary>' + esc(g.game) + " 自定义条件" + (act ? "（生效中）" : "") + "</summary>" +
+    '<label class="sim-lab" style="margin-top:8px">奇偶比（前区）</label>' +
+    '<div class="seg-row">' + ratioBtnsHTML("tzOdd", key, c.odd, pick) + "</div>" +
+    '<label class="sim-lab" style="margin-top:8px">大小比（前区，大号 &gt; ' + g.front.smallMax + "）</label>" +
+    '<div class="seg-row">' + ratioBtnsHTML("tzBig", key, c.big, pick) + "</div>" +
+    '<label class="sim-lab" style="margin-top:8px">三区每区至少</label>' +
+    '<div class="mini-in">' +
+      [0, 1, 2].map(function(i){
+        return '<input type="number" min="0" max="' + (pick - 2) + '" value="' + c.zone[i] +
+          '" id="tz-zone-' + key + "-" + i + '" style="width:56px">';
+      }).join("<span style='color:var(--ink2)'>/</span>") +
+    "</div>" +
+    '<label class="sim-lab" style="margin-top:8px">和值范围（' +
+      Math.round(g.front.sumDist.p5) + "~" + Math.round(g.front.sumDist.p95) + " 为历史常见区间）</label>" +
+    '<div class="mini-in">' +
+      '<input type="number" id="tz-summin-' + key + '" placeholder="最小" value="' + c.sumMin + '" style="width:74px">' +
+      "<span style=\"color:var(--ink2)\">~</span>" +
+      '<input type="number" id="tz-summax-' + key + '" placeholder="最大" value="' + c.sumMax + '" style="width:74px">' +
+    "</div>" +
+    '<div class="excl-row" style="margin-top:10px">' +
+      '<button class="btn primary" data-act="tzApply" data-g="' + key + '">按条件生成</button>' +
+      '<button class="btn ghost" data-act="tzReset" data-g="' + key + '"' + (act ? "" : " disabled") + ">恢复默认</button>" +
+    "</div>" +
+  "</details>";
+}
+function exclCardHTML(){
+  return '<div class="card"><div class="card-h"><h2>号码生成设置</h2>' +
+    '<span class="hint">影响下方「今日号码」</span></div>' +
+    '<div class="excl-row">' +
+      '<button class="btn ' + (S.exclude.ssq ? "on-mode" : "ghost") +
+        '" data-act="exclGame" data-v="ssq">双色球：' + (S.exclude.ssq ? "已排除上期" : "不排除") + '</button>' +
+      '<button class="btn ' + (S.exclude.dlt ? "on-mode" : "ghost") +
+        '" data-act="exclGame" data-v="dlt">大乐透：' + (S.exclude.dlt ? "已排除上期" : "不排除") + '</button>' +
+    '</div>' +
+    '<p class="scroll-hint" style="margin:0 0 10px">开启后，重新生成时会从「去掉上一期 7 个号码」的剩余号池里选号。' +
+      "开奖独立，这不会提高中奖概率，只是个人偏好。</p>" +
+    todayCfgDetailsHTML("ssq") +
+    todayCfgDetailsHTML("dlt") +
+    '<button class="btn primary" style="width:100%;margin-top:10px" data-act="reroll">换一组（按当前设置）</button>' +
+  '</div>';
+}
+
+function renderToday(){
+  var stale = D.meta.stale || {};
+  var staleHtml = "";
+  if (stale.ssq || stale.dlt) {
+    staleHtml = '<div class="msg">数据未刷新（抓取失败，已沿用本地缓存）。' +
+      "统计口径不变，仅为旧数据。</div>";
+  }
+  var counts = "双色球 " + D.ssq.count + " 期 / 大乐透 " + D.dlt.count + " 期";
+  q("#view-today").innerHTML =
+    '<div class="banner">本页号码由历史分布加权的随机抽样产生，<b>不能提高中奖概率</b>。' +
+      "开奖是独立随机事件，历史结果不影响未来开奖。</div>" +
+    '<p class="stamp"><span>数据截至 ' + esc(D.updated) + "</span><span>·</span><span>" +
+      counts + "</span></p>" +
+    staleHtml +
+    exclCardHTML() +
+    lastDrawCardHTML() +
+    gameCardHTML("ssq") +
+    gameCardHTML("dlt") +
+    '<div class="card"><div class="card-h"><h2>怎么理解这两组号码</h2></div>' +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.7">' +
+      "抽样时对每个号码按历史出现次数计算权重 <b>1/(1+z²)</b>，让明显偏多或偏少的号码权重降低；" +
+      "再复核结构（非全奇全偶、三区非空、和值落在历史 5%~95% 分位）。" +
+      "这些处理只改变<b>号码的外观分布</b>，不改变中奖概率——任何 6+1 组合的中奖概率完全相同。</p>" +
+    "</div>";
+}
+
+/* ---------------- Tab 2 统计 ---------------- */
+function freqChart(z){
+  var W = 340, H = 134, padL = 14, padR = 6, padT = 12, padB = 16;
+  var n = z.n, innerW = W - padL - padR, bw = innerW / n;
+  var maxF = 1, i, j;
+  for (i = 1; i <= n; i++) if (z.freq[i] > maxF) maxF = z.freq[i];
+  var baseH = H - padT - padB, mean = z.meanFreq;
+
+  // 号码密集时隔几个标一次，保证标签不重叠
+  var step = n > 20 ? 3 : 1;
+  var shown = [];
+  for (j = 1; j <= n; j += step) shown.push(j);
+  if (shown[shown.length - 1] !== n) {
+    if (n - shown[shown.length - 1] < 2) shown.pop();
+    shown.push(n);
+  }
+  var showSet = {};
+  shown.forEach(function(v){ showSet[v] = 1; });
+
+  var grid = [], bars = [], labels = [];
+  for (j = 1; j <= n; j++) {
+    var x = padL + (j - 0.5) * bw;
+    if (showSet[j]) {
+      grid.push('<line x1="' + x.toFixed(2) + '" x2="' + x.toFixed(2) + '" y1="' + padT +
+        '" y2="' + (H - padB) + '" stroke="#eff2f8" stroke-width="1"/>');
+      labels.push('<text x="' + x.toFixed(2) + '" y="' + (H - 4) + '" font-size="7.5" ' +
+        'text-anchor="middle" fill="#8b93a8">' + j + "</text>");
+    }
+    var f = z.freq[j];
+    var h = Math.max(1, (f / maxF) * baseH);
+    var hi = f >= mean * 1.1;
+    var w = Math.max(2.5, bw * 0.66);
+    bars.push('<rect x="' + (x - w / 2).toFixed(2) + '" y="' + (H - padB - h).toFixed(2) +
+      '" width="' + w.toFixed(2) + '" height="' + h.toFixed(2) + '" rx="1" fill="' +
+      (hi ? RED : GREY) + '"/>');
+  }
+  var yMean = H - padB - (mean / maxF) * baseH;
+  var yHi = H - padB - (mean * 1.1 / maxF) * baseH;
+  return '<div class="chart"><svg viewBox="0 0 ' + W + " " + H + '" role="img">' +
+    grid.join("") + bars.join("") +
+    '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yMean.toFixed(2) +
+      '" y2="' + yMean.toFixed(2) + '" stroke="' + BLUE + '" stroke-width="1" stroke-dasharray="3 2"/>' +
+    '<line x1="' + padL + '" x2="' + (W - padR) + '" y1="' + yHi.toFixed(2) +
+      '" y2="' + yHi.toFixed(2) + '" stroke="#e0a8a8" stroke-width="1" stroke-dasharray="2 3"/>' +
+    '<text x="' + padL + '" y="9" font-size="7.5" fill="#9aa3b5">最高 ' + maxF + " 次</text>" +
+    labels.join("") + "</svg></div>" +
+    '<div class="legend"><span><i style="background:' + RED + '"></i>高于均值 1.1 倍</span>' +
+    '<span><i style="background:' + GREY + '"></i>其余号码</span>' +
+    "<span>蓝虚线 = 均值 " + mean.toFixed(1) + "</span></div>";
+}
+
+function sumChart(sd){
+  var bins = sd.bins, W = 340, H = 96, padL = 6, padR = 6, padT = 8, padB = 14;
+  var maxC = 1, k;
+  for (k = 0; k < bins.length; k++) if (bins[k].count > maxC) maxC = bins[k].count;
+  var bw = (W - padL - padR) / bins.length, baseH = H - padT - padB;
+  var out = [], lo = bins[0].from, hi = bins[bins.length - 1].to + 1;
+  for (k = 0; k < bins.length; k++) {
+    var h = Math.max(1, (bins[k].count / maxC) * baseH);
+    var x = padL + k * bw;
+    out.push('<rect x="' + (x + 1).toFixed(2) + '" y="' + (H - padB - h).toFixed(2) +
+      '" width="' + Math.max(2, bw - 2).toFixed(2) + '" height="' + h.toFixed(2) +
+      '" rx="1" fill="#9aa6c0"/>');
+    if (k % 3 === 0) {
+      out.push('<text x="' + (x + bw / 2).toFixed(2) + '" y="' + (H - 3) + '" font-size="7" ' +
+        'text-anchor="middle" fill="#8b93a8">' + bins[k].from + "</text>");
+    }
+  }
+  var mx = padL + ((sd.mean - lo) / (hi - lo)) * (W - padL - padR);
+  out.push('<line x1="' + mx.toFixed(2) + '" x2="' + mx.toFixed(2) + '" y1="' + padT +
+    '" y2="' + (H - padB) + '" stroke="' + RED + '" stroke-width="1.2" stroke-dasharray="3 2"/>');
+  out.push('<text x="' + Math.min(mx + 3, W - 30).toFixed(2) + '" y="' + (padT + 7) +
+    '" font-size="8" fill="' + RED + '">均值 ' + sd.mean.toFixed(1) + "</text>");
+  return '<div class="chart"><svg viewBox="0 0 ' + W + " " + H + '" role="img">' +
+    out.join("") + "</svg></div>";
+}
+
+function miniCard(title, hint, body){
+  return '<div class="card"><div class="card-h"><h2>' + title + "</h2>" +
+    (hint ? '<span class="hint">' + hint + "</span>" : "") + "</div>" + body + "</div>";
+}
+
+function distRows(items, unit, cls){
+  var max = 1;
+  items.forEach(function(it){ if (it.count > max) max = it.count; });
+  return items.map(function(it){
+    var w = (it.count / max) * 100;
+    return '<div class="drow"><span class="dlab">' + it.label + (unit || "") + "</span>" +
+      '<span class="dbar"><i class="' + (cls || "") + '" style="width:' + w.toFixed(1) + '%"></i></span>' +
+      '<span class="dval">' + it.pct.toFixed(1) + "%</span></div>";
+  }).join("");
+}
+
+function zonePatternRows(zd){
+  var top = zd.patterns.slice(0, 8);
+  var max = 1;
+  top.forEach(function(p){ if (p.count > max) max = p.count; });
+  return top.map(function(p){
+    return '<div class="drow"><span class="dlab">' + p.z.join(":") + "</span>" +
+      '<span class="dbar"><i class="grey" style="width:' + (p.count / max * 100).toFixed(1) +
+      '%"></i></span><span class="dval">' + p.pct.toFixed(1) + "%</span></div>";
+  }).join("");
+}
+
+function scarcityTable(z){
+  var rows = "";
+  for (var i = 1; i <= z.n; i++) {
+    var avg = z.avgOmission[i];
+    rows += "<tr><td>" + pad(i) + "</td><td>" + z.omission[i] + "</td><td>" +
+      (avg === null || avg === undefined ? "—" : avg.toFixed(1)) + "</td><td>" +
+      z.maxOmission[i] + "</td></tr>";
+  }
+  return '<div class="tbl-wrap"><table class="om"><thead><tr><th>号码</th>' +
+    "<th>当前遗漏</th><th>平均遗漏</th><th>最大遗漏</th></tr></thead><tbody>" +
+    rows + "</tbody></table></div>" +
+    '<p class="scroll-hint">表格可上下滚动；遗漏 = 距最近一次出现所隔期数。</p>';
+}
+
+function chiCard(g, z){
+  var c = z.chi2;
+  var conclusion = c.p > 0.05
+    ? "与均匀分布无显著差异，符合随机特征。"
+    : "本次样本偏离均匀分布，属随机波动的常见形态，不构成任何预测依据。";
+  return '<div class="card"><div class="card-h"><h2>均匀性卡方检验</h2>' +
+    '<span class="hint">' + esc(g.game) + " · " + esc(z.label) + " · " + g.count +
+    " 期</span></div>" +
+    '<p style="font-size:13.5px;font-variant-numeric:tabular-nums;line-height:1.9">' +
+    "χ² = <b>" + c.chi2 + "</b>　df = <b>" + c.df + "</b>　p = <b>" + fmtP(c.p) + "</b><br>" +
+    '<span style="font-size:11.5px;color:var(--muted)">每号理论出现次数 ' + c.expected +
+    " 次</span></p>" +
+    '<p style="font-size:12.5px;color:var(--ink2);margin-top:8px">' + conclusion + "</p>" +
+    '<p style="font-size:11px;color:var(--muted);margin-top:6px">' +
+    "p &gt; 0.05 表示观测频次与“每个号码等概率”的假设不矛盾；" +
+    "这只说明历史数据像随机的，不代表下一期会“补平”。</p></div>";
+}
+
+function renderStats(){
+  var g = D[S.statGame], z = g[S.statZone];
+  var zoneLabels = [D[S.statGame].front.label, D[S.statGame].back.label];
+  var html = "" +
+    '<div class="seg" role="tablist">' +
+      '<button data-act="statGame" data-v="ssq" class="' + (S.statGame === "ssq" ? "on" : "") + '">双色球</button>' +
+      '<button data-act="statGame" data-v="dlt" class="' + (S.statGame === "dlt" ? "on" : "") + '">大乐透</button>' +
+    "</div>" +
+    '<div class="seg tiny">' +
+      '<button data-act="statZone" data-v="front" class="' + (S.statZone === "front" ? "on" : "") + '">' +
+        zoneLabels[0] + "</button>" +
+      '<button data-act="statZone" data-v="back" class="' + (S.statZone === "back" ? "on" : "") + '">' +
+        zoneLabels[1] + "</button>" +
+    "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>' + esc(z.label) + "频次分布</h2>" +
+      '<span class="hint">共 ' + g.count + " 期</span></div>" +
+      freqChart(z) +
+      '<p style="font-size:11.5px;color:var(--muted);margin-top:6px">' +
+      "横轴为号码，纵轴为出现次数。号码之间的小幅差异属正常抽样波动。</p></div>" +
+
+    '<div class="card"><div class="card-h"><h2>冷热榜</h2>' +
+      '<span class="hint">按出现次数排序</span></div>' +
+      '<div class="hotcold">' +
+        '<div class="hc"><h3>热号 TOP6</h3><div class="balls">' +
+          z.hot.map(function(r){ return '<span class="ball soft-red">' + pad(r.n) + "</span>"; }).join("") +
+        '</div><p class="scroll-hint">' +
+          z.hot.map(function(r){ return r.freq; }).join(" / ") + " 次</p></div>" +
+        '<div class="hc"><h3>冷号 TOP6</h3><div class="balls">' +
+          z.cold.map(function(r){ return '<span class="ball soft-grey">' + pad(r.n) + "</span>"; }).join("") +
+        '</div><p class="scroll-hint">' +
+          z.cold.map(function(r){ return r.freq; }).join(" / ") + " 次</p></div>" +
+      "</div>" +
+      '<p style="font-size:11px;color:var(--muted);margin-top:8px">' +
+      "冷热只是历史计数，下一期每个号码的概率仍然相同。</p></div>" +
+
+    '<div class="card"><div class="card-h"><h2>和值分布</h2>' +
+      '<span class="hint">均值 ' + z.sumDist.mean + " · 区间 " + z.sumDist.min + "~" + z.sumDist.max +
+      "</span></div>" + sumChart(z.sumDist) +
+      '<p style="font-size:11.5px;color:var(--muted);margin-top:4px">' +
+      "历史 5%~95% 分位：" + Math.round(z.sumDist.p5) + " ~ " + Math.round(z.sumDist.p95) + "</p></div>" +
+
+    miniCard("跨度分布",
+      "均值 " + z.spanDist.mean + " · " + z.spanDist.min + "~" + z.spanDist.max,
+      '<div class="chart"><svg viewBox="0 0 340 74" role="img">' +
+        spanBars(z.spanDist) + "</svg></div>") +
+
+    miniCard("奇偶比", "每期奇数个数占比", distRows(z.oddEven.items, " 奇", "")) +
+
+    miniCard("大小比", "大号 &gt; " + z.bigSmall.split + " 的个数占比",
+      distRows(z.bigSmall.items, " 大", "blue")) +
+
+    miniCard("三区比",
+      z.zones.map(function(v){ return v.label; }).join(" / "),
+      zonePatternRows(z.zones_dist)) +
+
+    miniCard("连号", "每期相邻连号的对数占比",
+      distRows(z.consecutive.items, " 对", "grey")) +
+
+    miniCard("重号", "与上期重复号码个数占比",
+      distRows(z.repeat.items, " 个", "grey")) +
+
+    '<div class="card"><div class="card-h"><h2>遗漏一览</h2>' +
+      '<span class="hint">' + esc(z.label) + "</span></div>" + scarcityTable(z) + "</div>" +
+
+    chiCard(g, z);
+  q("#view-stats").innerHTML = html;
+}
+
+function spanBars(sd){
+  var items = sd.items;
+  if (!items.length) return "";
+  var W = 340, H = 74, padT = 6, padB = 12, empty = (W - 12) / items.length;
+  var max = 1, k;
+  for (k = 0; k < items.length; k++) if (items[k].count > max) max = items[k].count;
+  var out = [];
+  for (k = 0; k < items.length; k++) {
+    var h = Math.max(1, (items[k].count / max) * (H - padT - padB));
+    var x = 6 + k * empty;
+    out.push('<rect x="' + (x + 0.5).toFixed(2) + '" y="' + (H - padB - h).toFixed(2) +
+      '" width="' + Math.max(1.5, empty - 1).toFixed(2) + '" height="' + h.toFixed(2) +
+      '" rx="1" fill="#b3bdd2"/>');
+    if (items[k].v % 5 === 0) {
+      out.push('<text x="' + (x + empty / 2).toFixed(2) + '" y="' + (H - 2) + '" font-size="7" ' +
+        'text-anchor="middle" fill="#8b93a8">' + items[k].v + "</text>");
+    }
+  }
+  return out.join("");
+}
+
+/* ---------------- Tab 3 走势 ---------------- */
+function trendMatrix(g, span){
+  var CELL_W = 14, ISS_W = 46, TAIL_W = 34;
+  var all = g.trend.series, total = all.length;
+  var off = Math.max(0, total - span);
+  var rows = all.slice(off);
+  var nums = g.trend.numbers, n = nums.length;
+  var marks = {}, key, r, c;
+  var links = g.trend.links || {};
+  Object.keys(links).forEach(function(k){
+    links[k].forEach(function(run){
+      if (run[1] < off) return;
+      var a = Math.max(run[0], off) - off;
+      var b = Math.min(run[1], total - 1) - off;
+      for (var i = a; i <= b; i++) marks[i + ":" + k] = (i === a ? "s" : "") + (i === b ? "e" : "");
+    });
+  });
+
+  var head = '<thead><tr><th class="iss" style="width:' + ISS_W + 'px">期号</th>';
+  nums.forEach(function(v){ head += '<th style="width:' + CELL_W + 'px">' + v + "</th>"; });
+  head += '<th class="tl" style="width:' + TAIL_W + 'px">和值</th>' +
+          '<th class="tl" style="width:' + TAIL_W + 'px">奇偶</th></tr></thead>';
+
+  var body = "<tbody>";
+  rows.forEach(function(row, ri){
+    var hit = {};
+    row.front.forEach(function(v){ hit[v] = 1; });
+    body += '<tr><td class="iss">' + esc(row.issue) + "</td>";
+    for (var i = 0; i < n; i++) {
+      var v = nums[i];
+      var m = marks[ri + ":" + v];
+      var cls = "cell";
+      if (m) cls += " lnk" + (m.indexOf("s") >= 0 ? " lnk-start" : "") +
+                       (m.indexOf("e") >= 0 ? " lnk-end" : "");
+      if (hit[v]) cls += " hit";
+      body += '<td class="' + cls + '">' + (hit[v] ? "<i></i>" : "") + "</td>";
+    }
+    body += '<td class="tl">' + row.sum + "</td>" +
+      '<td class="tl">' + row.odd + ":" + (row.front.length - row.odd) + "</td></tr>";
+  });
+  body += "</tbody>";
+
+  var tableW = ISS_W + n * CELL_W + TAIL_W * 2;
+  return '<div class="matrix-wrap"><table class="mx" style="width:' + tableW + 'px">' +
+    head + body + "</table></div>";
+}
+
+function renderTrend(){
+  var g = D[S.trendGame];
+  var html = "" +
+    '<div class="seg">' +
+      '<button data-act="trendGame" data-v="ssq" class="' + (S.trendGame === "ssq" ? "on" : "") + '">双色球</button>' +
+      '<button data-act="trendGame" data-v="dlt" class="' + (S.trendGame === "dlt" ? "on" : "") + '">大乐透</button>' +
+    "</div>" +
+    '<div class="seg tiny">' +
+      '<button data-act="trendSpan" data-v="30" class="' + (S.trendSpan === 30 ? "on" : "") + '">最近 30 期</button>' +
+      '<button data-act="trendSpan" data-v="50" class="' + (S.trendSpan === 50 ? "on" : "") + '">最近 50 期</button>' +
+    "</div>" +
+    '<div class="card"><div class="card-h"><h2>' + esc(g.game) + "前区走势</h2>" +
+      '<span class="hint">最新 ' + esc(g.latest.issue) + " 期</span></div>" +
+      trendMatrix(g, S.trendSpan) +
+      '<p class="scroll-hint">左右滑动查看全部号码。实心圆 = 该期命中；' +
+      "浅红竖线 = 同一号码连续出现。走势图只呈现历史，不预示未来。</p></div>" +
+    '<div class="card"><div class="card-h"><h2>怎么读这张图</h2></div>' +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.75">' +
+      "每一行是一期开奖，每一列是一个号码。点的疏密只反映该号码在最近 " + S.trendSpan +
+      " 期里出现了几次——在 33 选 6 的规则下，每个号码每期的出现概率约为 18.2%（大乐透 14.3%），" +
+      "因此出现 5~9 次都属于常见区间，连续出现也不罕见。" +
+      "把走势读出“趋势”属于对随机噪声的过度解读。</p></div>";
+  q("#view-trend").innerHTML = html;
+}
+
+/* ---------------- Tab 4 胆拖 ---------------- */
+function dtCfg(key){
+  var g = D[key];
+  return {
+    n: g.front.n, pick: g.front.pick,
+    backN: g.back.n, backPick: g.back.pick,
+    danMax: g.front.pick === 6 ? 5 : 4,
+    minTotal: g.front.pick === 6 ? 7 : 6
+  };
+}
+
+function dtGrid(key){
+  var st = S.dt[key], c = dtCfg(key), html = "";
+  for (var i = 1; i <= c.n; i++) {
+    var cls = "";
+    if (st.dan.indexOf(i) >= 0) cls = "dan";
+    else if (st.tuo.indexOf(i) >= 0) cls = "tuo";
+    html += '<button class="' + cls + '" data-act="dtBall" data-n="' + i + '">' + pad(i) + "</button>";
+  }
+  return html;
+}
+
+function dtBackGrid(key){
+  var st = S.dt[key], c = dtCfg(key), html = "";
+  for (var i = 1; i <= c.backN; i++) {
+    var cls = "";
+    if (st.back.indexOf(i) >= 0) cls = c.backPick === 1 ? "bdan" : "btuo";
+    html += '<button class="' + cls + '" data-act="dtBack" data-n="' + i + '">' + pad(i) + "</button>";
+  }
+  return html;
+}
+
+function dtCalc(key){
+  var st = S.dt[key], c = dtCfg(key);
+  var need = c.pick - st.dan.length;
+  var lines = 0;
+  if (need > 0 && st.tuo.length >= need) lines = comb(st.tuo.length, need);
+  var backComb = comb(st.back.length, c.backPick);
+  if (c.backPick > 1 && st.back.length < c.backPick) backComb = 0;
+  var bets = lines * backComb;
+  var msgs = [];
+  if (st.dan.length === 0) msgs.push("至少选择 1 个胆码。");
+  if (st.dan.length > c.danMax) msgs.push("胆码最多 " + c.danMax + " 个。");
+  if (st.dan.length + st.tuo.length < c.minTotal) {
+    msgs.push("胆码 + 拖码至少需要 " + c.minTotal + " 个（当前 " +
+      (st.dan.length + st.tuo.length) + " 个）。");
+  }
+  if (need > 0 && st.tuo.length < need) {
+    msgs.push("拖码不足：胆码 " + st.dan.length + " 个时，拖码至少要 " + need + " 个。");
+  }
+  if (st.back.length < c.backPick) {
+    msgs.push(D[key].back.label + "至少选择 " + c.backPick + " 个号码。");
+  }
+  return {need: need, lines: lines, backComb: backComb, bets: bets, cost: bets * 2, msgs: msgs};
+}
+
+function renderDantuo(){
+  var key = S.dtGame, c = dtCfg(key), st = S.dt[key], r = dtCalc(key);
+  var rec = D.today[key].dantuo;
+  var backLabel = D[key].back.label;
+  var frontLabel = D[key].front.label;
+  var statusCls = r.msgs.length ? "msg" : "msg ok";
+  var statusTxt = r.msgs.length
+    ? r.msgs.join(" ")
+    : "组合有效：" + frontLabel + " " + (st.dan.length + st.tuo.length) +
+      " 个号码生成 " + r.lines + " 注" +
+      (c.backPick > 1 || st.back.length > 1
+        ? "，" + backLabel + " " + st.back.length + " 个号码生成 " + r.backComb + " 注"
+        : "") +
+      "，合计 " + r.bets + " 注 " + r.cost + " 元。";
+
+  var html = "" +
+    '<div class="seg">' +
+      '<button data-act="dtGame" data-v="ssq" class="' + (key === "ssq" ? "on" : "") + '">双色球</button>' +
+      '<button data-act="dtGame" data-v="dlt" class="' + (key === "dlt" ? "on" : "") + '">大乐透</button>' +
+    "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>选择号码</h2>' +
+      '<span class="hint">先点模式，再点号码</span></div>' +
+      '<div class="mode-row">' +
+        '<button class="btn ' + (S.dtMode === "tuo" ? "on-mode" : "ghost") +
+          '" data-act="dtMode" data-v="tuo">加入拖码</button>' +
+        '<button class="btn ' + (S.dtMode === "dan" ? "on-mode" : "ghost") +
+          '" data-act="dtMode" data-v="dan">加入胆码</button>' +
+      "</div>" +
+      '<p class="scroll-hint" style="margin:0 0 8px">胆码 = 每注必含（红底）；拖码 = 参与组合（浅红底）</p>' +
+      '<div class="pick-grid">' + dtGrid(key) + "</div>" +
+      '<div class="sec-t">' + esc(backLabel) + "（选 " + c.backPick + " 个起，按 0 胆 " +
+        c.backPick + " 拖起算）</div>" +
+      '<div class="pick-grid">' + dtBackGrid(key) + "</div>" +
+      '<div class="mode-row" style="margin-top:12px">' +
+        '<button class="btn ghost" data-act="dtLoad">载入今日推荐胆拖</button>' +
+        '<button class="btn ghost" data-act="dtClear">清空</button>' +
+      "</div>" +
+    "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>组合结果</h2>' +
+      '<span class="hint">' + esc(D[key].game) + "</span></div>" +
+      '<div class="dt-stat">' +
+        '<div class="dt-num"><b>' + r.bets + "</b><span>注数</span></div>" +
+        '<div class="dt-num"><b>' + r.cost + "</b><span>金额（元）</span></div>" +
+      "</div>" +
+      '<p class="scroll-hint" style="margin-top:10px">' +
+        (r.lines > 0
+          ? "注数 = C(" + st.tuo.length + "," + r.need + ") = " + r.lines +
+            (c.backPick > 1 || st.back.length > 1
+              ? " × C(" + st.back.length + "," + c.backPick + ") = " + r.backComb
+              : "") +
+            " ；每注 2 元。"
+          : "注数 = —（选择尚不完整）；每注 2 元。") +
+        "</p>" +
+      "<div class='" + statusCls + "'>" + esc(statusTxt) + "</div>" +
+      '<div class="msg" style="background:#f7f9fc;border-color:var(--line);color:var(--ink2)">' +
+        "<b>官方胆拖规则：</b>" + esc(D.today[key].prize.dantuo) + "。<br>" +
+        "中奖条件：" + (key === "ssq"
+          ? "一等奖需 6 个红球 + 蓝球全中；"
+          : "一等奖需 5 个前区 + 2 个后区全中；") +
+        "胆拖只是把多个组合一次性买下，注数越多投入越大，" +
+        "<b>单注中奖概率不变</b>，也不会提高任何一注的中奖可能性。</div>" +
+    "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>今日推荐胆拖</h2>' +
+      '<span class="hint">' + esc(D.today[key].strategy) + "</span></div>" +
+      '<div class="balls">' +
+        '<span class="sep">胆</span>' +
+        rec.dan.map(function(n){ return '<span class="ball red chip">' + pad(n) + "</span>"; }).join("") +
+        '<span class="sep">拖</span>' +
+        rec.tuo.map(function(n){ return '<span class="ball soft-red chip">' + pad(n) + "</span>"; }).join("") +
+      "</div>" +
+      '<div class="balls" style="margin-top:8px">' +
+        '<span class="sep">' + esc(backLabel) + "</span>" +
+        rec.back.map(function(n){ return '<span class="ball blue chip">' + pad(n) + "</span>"; }).join("") +
+      "</div>" +
+      '<p class="scroll-hint" style="margin-top:8px">' + esc(rec.formula) + " = " + rec.bets +
+        " 注 / " + rec.cost + " 元。" + esc(rec.note) + "</p>" +
+      '<p class="scroll-hint" style="margin-top:4px">' +
+        "胆码取抽样权重最高者，即历史出现次数最接近均值的号码（不是“最热”的号码）；" +
+        "权重公式 1/(1+z²) 让偏离均值越远的号码权重越低。</p></div>";
+  q("#view-dantuo").innerHTML = html;
+}
+
+/* ---------------- Tab 5 模拟 ---------------- */
+function simBars(sim, idx){
+  var r = sim.random[idx], h = sim.hot[idx];
+  var max = 0;
+  sim.random.concat(sim.hot).forEach(function(v){ if (v > max) max = v; });
+  var w1 = max ? (r / max * 100) : 0, w2 = max ? (h / max * 100) : 0;
+  return '<div class="sim-grp"><p class="sim-lab">' + sim.labels[idx] + "</p>" +
+    '<div class="drow"><span class="dlab">随机</span><span class="dbar">' +
+      '<i style="width:' + w1.toFixed(1) + '%"></i></span>' +
+      '<span class="dval">' + r.toFixed(2) + "%</span></div>" +
+    '<div class="drow"><span class="dlab">热号</span><span class="dbar">' +
+      '<i class="blue" style="width:' + w2.toFixed(1) + '%"></i></span>' +
+      '<span class="dval">' + h.toFixed(2) + "%</span></div></div>";
+}
+
+function renderSim(){
+  var key = S.simGame, sim = D.today[key].sim;
+
+  var body;
+  if (!S.simDone) {
+    body = '<div class="card"><div class="card-h"><h2>还没跑</h2></div>' +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.7">' +
+      "点击上方按钮，用 " + fmtInt(sim.trials) + " 次独立试验比较两种选号策略的命中分布。" +
+      "每次试验抽一期开奖，再用两种策略各买一张票，统计命中前区号码的个数。</p></div>";
+  } else {
+    var bars = "";
+    for (var i = 0; i < sim.random.length; i++) {
+      bars += simBars(sim, i);
+    }
+    body = '<div class="card"><div class="card-h"><h2>命中分布对比</h2>' +
+        '<span class="hint">' + fmtInt(sim.trials) + " 次</span></div>" + bars +
+        '<div class="legend"><span><i style="background:' + RED + '"></i>随机选号</span>' +
+        '<span><i style="background:' + BLUE + '"></i>热号加权</span></div></div>' +
+      '<div class="card"><div class="card-h"><h2>结论</h2></div>' +
+        '<p style="font-size:13px;color:var(--ink2);line-height:1.75">' + esc(sim.conclusion) +
+        "</p>" +
+        '<p style="font-size:11.5px;color:var(--muted);margin-top:8px">' +
+        "最大差异 " + sim.maxGap + " 个百分点，属于抽样噪声量级。" +
+        "无论怎么选号，每一注的中奖概率都等于 1 除以全部组合数。</p></div>";
+  }
+
+  var html = "" +
+    '<div class="seg">' +
+      '<button data-act="simGame" data-v="ssq" class="' + (key === "ssq" ? "on" : "") + '">双色球</button>' +
+      '<button data-act="simGame" data-v="dlt" class="' + (key === "dlt" ? "on" : "") + '">大乐透</button>' +
+    "</div>" +
+    '<div class="card"><div class="card-h"><h2>蒙特卡洛对比</h2>' +
+      '<span class="hint">' + esc(D[key].game) + " 前区</span></div>" +
+      '<button class="btn primary" style="width:100%" data-act="simRun" id="simRun">' +
+        (S.simDone ? "重新演示一次" : "运行 " + fmtInt(sim.trials) + " 次蒙特卡洛") + "</button>" +
+      '<div class="prog" id="simProg" style="display:none"><i></i></div>' +
+      '<p class="scroll-hint" id="simNote">试验在构建时由 Python 完成，此处展示结果。</p></div>' +
+    body +
+    '<div class="card"><div class="card-h"><h2>理论概率与期望</h2>' +
+      '<span class="hint">官方公开发布</span></div>' +
+      '<div class="dt-stat">' +
+        '<div class="dt-num"><b style="font-size:15px">1/' + fmtInt(D.today.ssq.ev.jackpot) +
+          "</b><span>双色球一等奖</span></div>" +
+        '<div class="dt-num"><b style="font-size:15px">1/' + fmtInt(D.today.dlt.ev.jackpot) +
+          "</b><span>大乐透一等奖</span></div>" +
+      "</div>" +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.75;margin-top:10px">' +
+        "每注 2 元，官方返奖率 <b>51%</b>（49% 当期奖金 + 2% 调节基金）：" +
+        "长期平均每投入 100 元，奖金回报约 51 元，折算每注<b>期望值约 -1.0 元</b>" +
+        "（精确值 " + D.today.ssq.ev.netPerBet + " 元/注）。买的注数越多，期望损失等比放大。</p></div>";
+  q("#view-sim").innerHTML = html;
+}
+
+function runSim(){
+  var btn = q("#simRun"), prog = q("#simProg"), note = q("#simNote");
+  var bar = prog ? prog.querySelector("i") : null;
+  if (!btn || !bar) return;
+  btn.disabled = true;
+  prog.style.display = "block";
+  var pct = 0;
+  var timer = setInterval(function(){
+    pct += 7 + Math.random() * 9;
+    if (pct >= 100) pct = 100;
+    bar.style.width = pct + "%";
+    if (pct >= 100) {
+      clearInterval(timer);
+      S.simDone = true;
+      renderSim();
+    }
+  }, 60);
+}
+
+/* ---------------- Tab 6 保底 ---------------- */
+function fmtMoney(v){
+  v = Math.round(v);
+  if (v < 100000) return fmtInt(v) + " 元";
+  var w = v / 10000;
+  return (Math.abs(w - Math.round(w)) < 1e-9 ? fmtInt(Math.round(w)) : w.toFixed(1)) + " 万元";
+}
+
+function guardBudgetHTML(){
+  var g = D.guard[S.guardGame], money = S.guardBudget;
+  if (!money || money <= 0) {
+    return '<p class="scroll-hint">输入金额，这里会算出它够保到哪一档、最坏拿回多少。</p>';
+  }
+  var bets = Math.floor(money / 2), expect = bets * g.evPerBet, hit = null, i;
+  // tiers 按保底成本降序排列，第一个进预算的就是能保住的最高档
+  for (i = 0; i < g.tiers.length; i++) {
+    if (g.tiers[i].cost <= money) { hit = g.tiers[i]; break; }
+  }
+  if (!hit) {
+    return '<div class="gbox warn"><b>' + fmtInt(money) + " 元不够保任何一档</b>" +
+      esc(g.game) + " 最便宜的保底是" + esc(g.cheapest.name) + "，" +
+      esc(g.cheapest.costText) + "。<br>这 " + fmtInt(money) + " 元能买 " +
+      fmtInt(bets) + " 注，期望回收 " + expect.toFixed(2) + " 元，期望净亏 <b>" +
+      (money - expect).toFixed(2) + " 元</b>。</div>";
+  }
+  var times = Math.floor(money / hit.cost);
+  var spend = times * hit.cost, got = times * hit.prize;
+  var tail = hit.fixed === null ? "（按参考奖金估）" : "";
+  return '<div class="gbox ok"><b>' + fmtInt(money) + " 元可以保" + esc(hit.name) + "</b>" +
+    '<div class="gline"><span>每份 ' + fmtInt(hit.need) + " 注</span><b>" +
+      esc(hit.costText) + "</b></div>" +
+    '<div class="gline"><span>预算够买</span><b>' + times + " 份，共 " +
+      fmtInt(spend) + " 元</b></div>" +
+    '<div class="gline"><span>最坏拿回</span><b class="bad">' +
+      esc(fmtMoney(got)) + tail + "</b></div>" +
+    '<div class="gline"><span>最坏净亏</span><b class="bad">' +
+      esc(fmtMoney(spend - got)) + "</b></div>" +
+    '<div class="gline"><span>最坏回收率</span><b>' + hit.floorPct.toFixed(1) + "%</b></div></div>";
+}
+
+function guardBudgetRender(){
+  var out = q("#gbudgetOut");
+  if (out) out.innerHTML = guardBudgetHTML();
+}
+
+function renderGuard(){
+  var key = S.guardGame, g = D.guard[key], s = g.single;
+
+  var pcts = g.tiers.map(function(t){ return t.floorPct; });
+  var minPct = Math.min.apply(null, pcts).toFixed(1);
+  var maxPct = Math.max.apply(null, pcts).toFixed(1);
+
+  var rows = g.tiers.map(function(t){
+    var cheap = (t.name === g.cheapest.name);
+    return "<tr><td>" + esc(t.name) +
+        (cheap ? '<small class="tagcheap">最便宜</small>' : "") + "</td>" +
+      '<td><span class="ge">' + (t.exact ? "" : "≥") + "</span>" + fmtInt(t.need) +
+        "<small>" + esc(fmtMoney(t.cost)) + "</small></td>" +
+      "<td>" + esc(t.prizeCell) +
+        (t.prizeSub ? "<small>" + esc(t.prizeSub) + "</small>" : "") + "</td>" +
+      '<td class="rate">' + t.floorPct.toFixed(1) + "%</td></tr>";
+  }).join("");
+
+  var html = "" +
+    '<div class="seg">' +
+      '<button data-act="guardGame" data-v="ssq" class="' + (key === "ssq" ? "on" : "") + '">双色球</button>' +
+      '<button data-act="guardGame" data-v="dlt" class="' + (key === "dlt" ? "on" : "") + '">大乐透</button>' +
+    "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>两元能保什么</h2>' +
+      '<span class="hint">最直接的回答</span></div>' +
+      '<div class="dt-stat">' +
+        '<div class="dt-num"><b>1 注</b><span>2 元买到的</span></div>' +
+        '<div class="dt-num"><b>' + s.anyWinPct.toFixed(2) + '%</b><span>中任意奖（' +
+          esc(s.anyWinOdds) + '）</span></div>' +
+        '<div class="dt-num"><b>' + s.expectReturn.toFixed(2) + ' 元</b><span>期望回收</span></div>' +
+        '<div class="dt-num"><b style="color:' + RED + '">-' + s.expectLoss.toFixed(2) +
+          ' 元</b><span>期望净亏</span></div>' +
+      "</div>" +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.75;margin-top:11px">' +
+        "答案：<b>保不住任何东西</b>。2 元只能买 1 注，中奖概率就是上面那个数，" +
+        "没有任何买法能让它变高。这 2 元唯一能保证的事，是<b>最多只亏 2 元</b>。</p>" +
+      '<p class="scroll-hint">本彩种最便宜的保底是' + esc(g.cheapest.name) + "：" +
+        esc(g.cheapest.costText) + "（" + fmtInt(g.cheapest.need) + " 注）保底拿回 " +
+        esc(g.cheapest.prizeText) + "，最坏只收回 " +
+        g.cheapest.floorPct.toFixed(1) + "%。</p></div>" +
+
+    '<div class="card"><div class="card-h"><h2>' + esc(g.tiersTitle) + "</h2>" +
+      '<span class="hint">先看花费，再看拿回</span></div>' +
+      '<table class="gt"><thead><tr><th>保底奖级</th><th>最少注数</th>' +
+        "<th>保底拿回</th><th>最坏回收率</th></tr></thead><tbody>" + rows + "</tbody></table>" +
+      '<p class="scroll-hint">注数是<b>计数法下限</b>（全部开奖组合 ÷ 单注最多能覆盖的组合数），' +
+        "真实覆盖设计通常还要更多，所以带 ≥ 的都只是下限。" +
+        "「保底拿回」只算最坏的那一档，不含同一批票顺带命中的其他小奖；" +
+        "浮动奖按参考奖金估算。无论保哪一档，最坏情况都只能收回成本的 " +
+        minPct + "%～" + maxPct + "%。</p></div>" +
+
+    '<div class="card"><div class="card-h"><h2>花多少能保底</h2>' +
+      '<span class="hint">输入预算看能保住哪一档</span></div>' +
+      '<div class="frow"><label>我的预算</label>' +
+        '<input type="number" inputmode="decimal" min="0" step="50" id="gbudget" value="' +
+        (S.guardBudget > 0 ? S.guardBudget : "") + '" placeholder="比如 200"></div>' +
+      '<div id="gbudgetOut"></div></div>' +
+
+    '<div class="card"><div class="card-h"><h2>为什么保不住钱</h2>' +
+      '<span class="hint">中奖和回本是两件事</span></div>' +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.75">' +
+        "每注 2 元、官方返奖率 51%，所以任意 N 注的期望回收恒为：</p>" +
+      '<div class="gmath">期望回收 = N 注 × 2 元 × 51%<br>' +
+        "　　　　　= 花费 × 0.51</div>" +
+      '<p style="font-size:12.5px;color:var(--ink2);line-height:1.75;margin-top:9px">' +
+        "这条等式与号码怎么选、怎么覆盖、买多少注<b>全都无关</b>。" +
+        "保底能做到的只有一件事：把「可能全亏」变成「确定亏掉 49%」。" +
+        "波动没了，期望一分没变。</p>" +
+      '<div class="gthree">' +
+        '<div><span>你花</span><b>' + esc(g.cheapest.costText) + "</b></div>" +
+        '<div><span>平均拿回</span><b>' + (g.cheapest.cost * g.evPerBet / 2).toFixed(2) +
+          " 元</b></div>" +
+        '<div><span>最坏拿回</span><b class="bad">' + esc(g.cheapest.prizeText) + "</b></div>" +
+      "</div>" +
+      '<p class="scroll-hint">以本彩种最便宜的一档为例：期望值永远夹在成本和保底之间，' +
+        "而期望永远小于成本。</p></div>";
+  q("#view-guard").innerHTML = html;
+  guardBudgetRender();
+}
+
+/* ---------------- Tab 7 关于 ---------------- */
+var BUDGET_KEY = "lottery.budget.v1";
+
+function readBudget(){
+  var def = {day: 0, dayUsed: 0, month: 0, monthUsed: 0};
+  try {
+    var raw = localStorage.getItem(BUDGET_KEY);
+    if (!raw) return def;
+    var o = JSON.parse(raw);
+    return {
+      day: Number(o.day) || 0, dayUsed: Number(o.dayUsed) || 0,
+      month: Number(o.month) || 0, monthUsed: Number(o.monthUsed) || 0
+    };
+  } catch (e) { return def; }
+}
+function saveBudget(b){
+  try { localStorage.setItem(BUDGET_KEY, JSON.stringify(b)); } catch (e) {}
+}
+
+function budgetHTML(){
+  var b = readBudget();
+  return '<div class="frow"><label>日预算</label>' +
+      '<input type="number" inputmode="decimal" min="0" step="10" data-bud="day" value="' +
+      (b.day || "") + '" placeholder="0"></div>' +
+    '<div class="frow"><label>今日已投入</label>' +
+      '<input type="number" inputmode="decimal" min="0" step="10" data-bud="dayUsed" value="' +
+      (b.dayUsed || "") + '" placeholder="0"></div>' +
+    '<div class="prog" id="barDay"><i></i></div>' +
+    '<div class="bar-lab"><span>日进度</span><span id="txtDay">—</span></div>' +
+    '<div class="frow" style="margin-top:14px"><label>月预算</label>' +
+      '<input type="number" inputmode="decimal" min="0" step="50" data-bud="month" value="' +
+      (b.month || "") + '" placeholder="0"></div>' +
+    '<div class="frow"><label>本月已投入</label>' +
+      '<input type="number" inputmode="decimal" min="0" step="50" data-bud="monthUsed" value="' +
+      (b.monthUsed || "") + '" placeholder="0"></div>' +
+    '<div class="prog" id="barMonth"><i></i></div>' +
+    '<div class="bar-lab"><span>月进度</span><span id="txtMonth">—</span></div>' +
+    '<div id="budWarn"></div>';
+}
+
+function todayKey(){
+  var d = new Date();
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
+}
+
+function updateBudget(){
+  var b = readBudget();
+  [["day", "barDay", "txtDay", "dayUsed"], ["month", "barMonth", "txtMonth", "monthUsed"]]
+    .forEach(function(cfg){
+      var limit = b[cfg[0]], used = b[cfg[3]];
+      var bar = q("#" + cfg[1]), txt = q("#" + cfg[2]);
+      if (!bar || !txt) return;
+      var pct = limit > 0 ? (used / limit) * 100 : 0;
+      var fill = bar.querySelector("i");
+      fill.style.width = Math.min(100, pct).toFixed(1) + "%";
+      bar.className = "prog" + (pct > 100 ? " red" : "");
+      txt.textContent = limit > 0
+        ? used.toFixed(0) + " / " + limit.toFixed(0) + " 元 · " + pct.toFixed(0) + "%"
+        : "未设置预算";
+    });
+  var warn = q("#budWarn");
+  if (warn) {
+    var over = (b.day > 0 && b.dayUsed > b.day) || (b.month > 0 && b.monthUsed > b.month);
+    warn.innerHTML = over
+      ? '<div class="msg err"><b>已触及红线，请停止投注。</b>预算的作用是限制损失速度，' +
+        "不是提高中奖概率。若已经超支，请今天到此为止。</div>"
+      : "";
+  }
+}
+
+var ZODIAC = ["鼠", "牛", "虎", "兔", "龙", "蛇", "马", "羊", "猴", "鸡", "狗", "猪"];
+/* [起始月, 起始日, 该日起的星座] */
+var CONSTELLATION = [
+  [1, 20, "水瓶座"], [2, 19, "双鱼座"], [3, 21, "白羊座"], [4, 20, "金牛座"],
+  [5, 21, "双子座"], [6, 22, "巨蟹座"], [7, 23, "狮子座"], [8, 23, "处女座"],
+  [9, 23, "天秤座"], [10, 24, "天蝎座"], [11, 23, "射手座"], [12, 22, "摩羯座"]
+];
+var LIFE_COLOR = {
+  1: ["正红", "#d93a3a"], 2: ["霜白", "#c9d2e3"], 3: ["明黄", "#e8b73a"],
+  4: ["墨绿", "#2f7a58"], 5: ["湖蓝", "#2a6fd6"], 6: ["藕粉", "#d97fa6"],
+  7: ["银灰", "#9aa3b5"], 8: ["深棕", "#7a5230"], 9: ["紫罗兰", "#7a4fbf"]
+};
+
+function constellationOf(m, d){
+  var i = m - 1;
+  if (d >= CONSTELLATION[i][1]) return CONSTELLATION[i][2];
+  return CONSTELLATION[(i + 11) % 12][2];
+}
+
+function calcEgg(dateStr){
+  if (!dateStr) return null;
+  var p = dateStr.split("-");
+  var y = Number(p[0]), m = Number(p[1]), d = Number(p[2]);
+  if (!y || !m || !d) return null;
+  var zodiac = ZODIAC[((y - 4) % 12 + 12) % 12];
+  var cons = constellationOf(m, d);
+  var digits = ("" + y + m + d).split("").map(Number);
+  var sum = digits.reduce(function(a, b){ return a + b; }, 0);
+  while (sum > 9) {
+    sum = ("" + sum).split("").reduce(function(a, b){ return a + Number(b); }, 0);
+  }
+  var color = LIFE_COLOR[sum] || LIFE_COLOR[1];
+  var lucky = [];
+  var seen = {};
+  digits.forEach(function(v){ if (v >= 1 && v <= 9 && !seen[v]) { seen[v] = 1; lucky.push(v); } });
+  while (lucky.length < 3) lucky.push(((sum + lucky.length) % 9) + 1);
+  return {zodiac: zodiac, cons: cons, lifeNum: sum,
+          color: color[0], colorHex: color[1], lucky: lucky.slice(0, 3)};
+}
+
+function prizeCard(key){
+  var p = D.today[key].prize;
+  var rows = p.tiers.map(function(t){
+    return "<tr><td>" + esc(t.name) + "</td><td>" + esc(t.cond) + '</td><td class="amt">' +
+      esc(t.amount) + (t.note ? '<span class="pn">' + esc(t.note) + "</span>" : "") + "</td></tr>";
+  }).join("");
+  return '<div class="card"><div class="card-h"><h2>' + esc(D[key].game) + " 奖级</h2>" +
+    '<span class="hint">共 ' + p.levels + " 个奖级</span></div>" +
+    '<table class="tier"><thead><tr><th>奖级</th><th>中奖条件</th>' +
+      '<th class="amt">单注奖金</th></tr></thead><tbody>' + rows + "</tbody></table>" +
+    '<div class="tier-meta">' + esc(p.drawHint) + "　·　<b>返奖率 " + p.paybackPct +
+      "%</b>（" + p.poolPct + "% 当期奖金 + " + p.adjustPct + "% 调节基金）　·　发行费 " +
+      p.issueFeePct + "%　·　公益金 " + p.welfarePct + "%" +
+      "<br>胆拖投注：" + esc(p.dantuo) + "</div>" +
+    '<p class="scroll-hint" style="margin-top:6px">' +
+      "奖级与奖金以中国福彩网 / 中国体彩网最新公布规则为准。" +
+      "奖金为税前金额；浮动奖按当期销量与实际中奖注数分配。</p></div>";
+}
+
+function renderAbout(){
+  var html = "" +
+    '<div class="card"><div class="card-h"><h2>概率事实清单</h2>' +
+      '<span class="hint">比任何“技巧”都重要</span></div>' +
+      '<ol class="facts">' +
+        "<li>每期开奖是<b>独立同分布的随机事件</b>，前面的结果不影响后面的结果。</li>" +
+        "<li>双色球一等奖概率 <b>1/17,721,088</b>，大乐透 <b>1/21,425,712</b>；" +
+          "任何一注号码的中奖概率完全相同。</li>" +
+        "<li>“热号”“冷号”“遗漏”“走势”都是<b>历史描述性统计</b>，不是预测依据。" +
+          "所谓“该出了”是赌徒谬误。</li>" +
+        "<li>加倍、追号、胆拖复式都只是<b>等比放大投入</b>，不改变单注概率。</li>" +
+        "<li>长期期望为负：返奖率 51%，每花 2 元的长期期望回报约 1.02 元（净期望约 -0.98 元/注）。</li>" +
+      "</ol></div>" +
+
+    prizeCard("ssq") +
+    prizeCard("dlt") +
+
+    '<div class="card"><div class="card-h"><h2>预算红线</h2>' +
+      '<span class="hint">保存在本机，不上传</span></div>' +
+      '<p style="font-size:12px;color:var(--muted);margin-bottom:10px">' +
+      "先想清楚“输了也不影响生活”的金额，再决定买多少。</p>" +
+      budgetHTML() + "</div>" +
+
+    '<div class="card"><div class="card-h"><h2>玄学彩蛋</h2>' +
+      '<span class="hint">纯娱乐</span></div>' +
+      '<details class="egg"><summary>输入生日，看点没用的 <span class="badge">娱乐</span></summary>' +
+        '<div class="egg-body">' +
+          '<p style="font-size:11.5px;color:#8a5a00;background:var(--warn-bg);' +
+            'border:1px solid var(--warn-line);border-radius:8px;padding:7px 9px;margin:8px 0">' +
+            "娱乐内容，无科学依据。生成的“幸运数”只做装饰，<b>不参与选号计算</b>。</p>" +
+          '<div class="frow" style="margin-top:8px"><label style="width:64px">生日</label>' +
+            '<input type="date" id="eggDate"></div>' +
+          '<div id="eggOut"></div>' +
+        "</div></details></div>" +
+
+    '<div class="card"><div class="card-h"><h2>免责声明</h2></div>' +
+      '<p style="font-size:12px;color:var(--ink2);line-height:1.8">' +
+      "本页面是本地运行的数据观察工具，<b>不销售彩票、不代购、不提供投注建议</b>。" +
+      "所有号码由随机抽样生成，与任何开奖结果无关，不能提高中奖概率。" +
+      "彩票是娱乐消费，不是投资方式；请量力而行，未满 18 周岁请勿购买彩票。</p>" +
+      "<p style=\"font-size:11.5px;color:var(--muted);margin-top:8px\">" +
+      "数据来源：中国福利彩票官网（cwl.gov.cn）、中国体育彩票官网（sporttery.cn）。" +
+      "统计口径见“统计”页说明。</p></div>" +
+
+    '<div class="foot">构建时间 ' + esc(D.meta.generated) + " · 生成方式：Python 预计算 + 单文件渲染" +
+      " · 数据期数 双色球 " + D.ssq.count + " / 大乐透 " + D.dlt.count + "</div>";
+  q("#view-about").innerHTML = html;
+  updateBudget();
+}
+
+/* ---------------- 依据库（wiki：A 官方规则 / B 统计指标 / C 民间公式） ---------------- */
+// 官方固定奖金（来源：中国福利彩票游戏规则 cwl.gov.cn；中国体育彩票超级大乐透游戏规则 lottery.gov.cn）
+var PRIZE_SSQ = [
+  ["一等奖", "浮动（按奖池，封顶 500 万）"],
+  ["二等奖", "浮动（按奖池，封顶 500 万）"],
+  ["三等奖", "3000 元"],
+  ["四等奖", "200 元"],
+  ["五等奖", "10 元"],
+  ["六等奖", "5 元"]
+];
+var PRIZE_DLT = [
+  ["一等奖", "浮动（按奖池，封顶 500 万）"],
+  ["二等奖", "浮动（按奖池，封顶 500 万）"],
+  ["三等奖", "10000 元"],
+  ["四等奖", "3000 元"],
+  ["五等奖", "300 元"],
+  ["六等奖", "200 元"],
+  ["七等奖", "100 元"],
+  ["八等奖", "15 元"],
+  ["九等奖", "5 元"]
+];
+// B 统计指标库
+var WIKI_INDICATORS = [
+  ["和值", "前区号码相加之和。双色球理论均值约 102（(1+33)×6÷2），偏离越远越“偏态”。"],
+  ["和值尾", "和值个位数（0-9），民间常看尾号分布。"],
+  ["均值", "和值 ÷ 选号数，反映号码整体高低。"],
+  ["跨度", "最大号 − 最小号，衡量号码覆盖宽度。"],
+  ["最大间距", "排序后相邻两号的最大差值，反映号码疏密。"],
+  ["奇偶比", "奇数个数 : 偶数个数。双色球常见 3:3、4:2、2:4。"],
+  ["大小比", "以界限区分大小（双色球前区 ≤16 为小，>16 为大），大数:小数。"],
+  ["质合比", "质数个数（彩票约定 1 视为质数）。"],
+  ["012 路", "号码除以 3 余 0/1/2 的个数分布。"],
+  ["区间比", "按三区（1-11 / 12-22 / 23-33）的号码分布，如 2:2:2。"],
+  ["连号", "相邻数值成对（如 12、13）的个数与组数。"],
+  ["重号", "与上一期重复的号码个数。"],
+  ["邻号（斜位）", "与上一期某号相差 1 的号码个数。"],
+  ["同尾", "尾数相同的号码组最大大小（如 3、13、23）。"],
+  ["AC 值", "两两正差值去重个数 −(选号数−1)，衡量号码分散度。"],
+  ["遗漏", "某号码距上次出现的间隔期数；遗漏越大越“冷”。"],
+  ["冷热温", "按近期出现频率分档：热（高频）、温（中频）、冷（低频）。"]
+];
+// C 民间选号公式法（仅供参考，不提升概率）
+var WIKI_FOLK = [
+  ["热号追号", "选近期高频出现的号码。", "高频只是已发生的统计，下一期每个号仍等概率，热号不会“继续热”。"],
+  ["冷号回补", "选遗漏大的号码，认为“该出了”。", "开奖机无记忆，不会“补偿”长期未出的号；冷号下一期概率与他号完全相同。"],
+  ["均值回归", "选择和值、奇偶比贴近历史均值的组合。", "回归是长期统计现象，不保证单期发生；任一具体组合概率不变。"],
+  ["均衡派", "追求奇偶 3:3、大小 3:3、三区 2:2:2 等“匀称”形态。", "匀称只是审美偏好；偏态组合同样可能开出，概率不因“好看”而提升。"],
+  ["连号/邻号跟随", "参考上期连号、邻号位置选号。", "各期开奖独立，上期形态不决定下期。"],
+  ["同尾/同区间沿用", "沿用上期尾数或区间分布。", "同上，属主观规律幻觉。"],
+  ["杀号法", "杀掉上期开奖号、杀冷号、杀某路数以缩小范围。", "杀号只是减少你买的注数（少花钱），没提高剩下那注的中奖概率；反而可能杀掉当期实际开出的号。"]
+];
+
+function renderWiki(){
+  var g = S.wikiGame;
+  var gc = D[g];
+  var combos = comb(gc.front.n, gc.front.pick) * comb(gc.back.n, gc.back.pick);
+  var chance = 1 / combos;
+  var chanceStr = chance < 1e-6 ? chance.toExponential(2) : chance.toFixed(8);
+  var prize = (g === "ssq") ? PRIZE_SSQ : PRIZE_DLT;
+  var prizeRows = prize.map(function(p){
+    return '<div class="trow"><span class="tname">' + esc(p[0]) + '</span><span class="tval">' + esc(p[1]) + "</span></div>";
+  }).join("");
+  var indRows = WIKI_INDICATORS.map(function(it){
+    return '<div class="ind"><b>' + esc(it[0]) + "</b><span>" + esc(it[1]) + "</span></div>";
+  }).join("");
+  var folkRows = WIKI_FOLK.map(function(f){
+    return '<details class="why"><summary>' + esc(f[0]) +
+      '</summary><div class="why-body">做法：' + esc(f[1]) +
+      '<p class="why-no">⚠ ' + esc(f[2]) + "</p></div></details>";
+  }).join("");
+  var html =
+    '<div class="banner">本页所有指标与公式仅用于学习、统计与娱乐，<b>不改变任何一注的中奖概率</b>，不构成购彩建议。每期开奖独立随机，历史不影响未来。</div>' +
+    '<div class="seg" style="margin:10px 0">' +
+      '<button class="opt' + (g === "ssq" ? " on" : "") + '" data-act="wikiGame" data-g="ssq">双色球</button>' +
+      '<button class="opt' + (g === "dlt" ? " on" : "") + '" data-act="wikiGame" data-g="dlt">大乐透</button>' +
+    "</div>" +
+    '<div class="card"><div class="card-h"><h2>A · 官方规则与中奖概率</h2></div>' +
+      '<div class="kv"><span>总组合数（全部可能的一注）</span><b>' + fmtInt(combos) + "</b></div>" +
+      '<div class="kv"><span>单注一等奖概率</span><b class="red">1 / ' + fmtInt(combos) + " ≈ " + chanceStr + "</b></div>" +
+      '<p class="scroll-hint" style="margin-top:10px">奖级与固定奖金（官方规则）：</p>' +
+      prizeRows +
+      '<div class="msg" style="margin-top:10px">事实：每期开奖是独立随机事件，任一组合中奖概率完全相同。已开出的号码不影响未来——这正是“杀号”“追热号”都不能提高概率的根本原因。</div>' +
+    "</div>" +
+    '<div class="card"><div class="card-h"><h2>B · 统计指标库</h2></div>' +
+      '<p class="scroll-hint">这些指标描述“号码长相”，可观察规律，但不预示开奖。</p>' +
+      indRows +
+    "</div>" +
+    '<div class="card" style="border:1px solid var(--red-line)"><div class="card-h"><h2 style="color:var(--red)">C · 民间选号公式法（仅供参考）</h2></div>' +
+      '<div class="msg err" style="margin-bottom:8px">以下方法均属“赌徒谬误”与主观偏好，只改变号码长相，不改变中奖概率。仅供娱乐与学习统计，绝不构成购彩建议。</div>' +
+      folkRows +
+      '<div class="msg" style="margin-top:10px">理性购彩：把它当随机游戏，量力而行，不投入超出承受能力的钱。</div>' +
+    "</div>";
+  q("#view-wiki").innerHTML = html;
+}
+
+/* ---------------- 选号 / 核对（新增） ---------------- */
+var W = {};   // 每彩种前/后区加权权重，boot 时由频次算出
+
+function mulberry32(a){
+  return function(){
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function buildWeights(freq, n){
+  var vals = [], i;
+  for (i = 1; i <= n; i++) vals.push(freq[i]);
+  var mean = vals.reduce(function(a, b){ return a + b; }, 0) / n;
+  var varr = 0;
+  for (i = 0; i < n; i++) varr += (vals[i] - mean) * (vals[i] - mean);
+  varr /= n;
+  var std = Math.sqrt(varr);
+  var w = {};
+  for (i = 1; i <= n; i++) {
+    var z = (freq[i] - mean) / (std + 1e-9);
+    w[i] = 1 / (1 + z * z);
+  }
+  return w;
+}
+function bisectRight(arr, x){
+  var lo = 0, hi = arr.length;
+  while (lo < hi) {
+    var m = (lo + hi) >> 1;
+    if (arr[m] <= x) lo = m + 1; else hi = m;
+  }
+  return lo;
+}
+function sampleWeightedEx(rng, weights, exclSet, k){
+  var nums = Object.keys(weights).map(Number)
+    .filter(function(v){ return !(exclSet && exclSet.has(v)); })
+    .sort(function(a, b){ return a - b; });
+  var wts = nums.map(function(v){ return weights[v]; });
+  var out = [];
+  for (var _ = 0; _ < k && nums.length; _++) {
+    var cum = [], total = 0, i;
+    for (i = 0; i < wts.length; i++) { total += wts[i]; cum.push(total); }
+    var idx = bisectRight(cum, rng() * total);
+    if (idx >= nums.length) idx = nums.length - 1;
+    out.push(nums.splice(idx, 1)[0]);
+    wts.splice(idx, 1);
+  }
+  return out.sort(function(a, b){ return a - b; });
+}
+function structureOk(nums, cfg, p5, p95){
+  var odd = nums.filter(function(v){ return v % 2 === 1; }).length;
+  if (odd === 0 || odd === nums.length) return false;
+  for (var z = 0; z < cfg.zones.length; z++) {
+    var lo = cfg.zones[z][0], hi = cfg.zones[z][1];
+    if (!nums.some(function(v){ return v >= lo && v <= hi; })) return false;
+  }
+  var s = nums.reduce(function(a, b){ return a + b; }, 0);
+  if (p5 != null && s < p5) return false;
+  if (p95 != null && s > p95) return false;
+  return true;
+}
+function dateSeed(){
+  var d = new Date();
+  return (d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()) * 10;
+}
+function buildAllWeights(){
+  ["ssq", "dlt"].forEach(function(key){
+    var g = D[key];
+    W[key] = {
+      front: buildWeights(g.front.freq, g.front.n),
+      back: buildWeights(g.back.freq, g.back.n)
+    };
+  });
+}
+function genFront(key, rng, exclSet){
+  var g = D[key], fz = g.front;
+  var cfg = {n: fz.n, pick: fz.pick, zones: fz.zones.map(function(z){ return [z.lo, z.hi]; })};
+  for (var i = 0; i < 200; i++) {
+    var cand = sampleWeightedEx(rng, W[key].front, exclSet, fz.pick);
+    if (cand.length < fz.pick) continue;
+    if (structureOk(cand, cfg, fz.sumDist.p5, fz.sumDist.p95)) return cand;
+  }
+  return sampleWeightedEx(rng, W[key].front, exclSet, fz.pick);
+}
+function genBack(key, rng, exclSet){
+  var g = D[key], bz = g.back;
+  return sampleWeightedEx(rng, W[key].back, exclSet, bz.pick);
+}
+function regenerate(key){
+  var excl = new Set(S.exclude[key] ? D[key].latest.front.concat(D[key].latest.back) : []);
+  var seed = (dateSeed() + ({ssq: 1, dlt: 2})[key] + (S.exclude[key] ? 1 : 0) + S.roll[key] * 131) >>> 0;
+  var rng = mulberry32(seed);
+  S.shown[key] = {front: genFront(key, rng, excl), back: genBack(key, rng, excl)};
+  S.roll[key]++;
+}
+function applyTodayCfg(key){
+  var c = S.todayCfg[key];
+  var opts = {
+    odd: c.odd === "any" ? null : (c.odd.split(":")[0] | 0),
+    big: c.big === "any" ? null : (c.big.split(":")[0] | 0),
+    zoneMin: c.zone.slice(),
+    sumMin: c.sumMin === "" ? null : Number(c.sumMin),
+    sumMax: c.sumMax === "" ? null : Number(c.sumMax),
+    include: [], exclude: [],
+    excludeLast: S.exclude[key], count: 1,
+    backOdd: "any", backBig: "any"
+  };
+  var res = genFiltered(key, opts);
+  if (!res.list.length) { toast("条件下没生成出来（可能太苛刻或互相冲突），试试放宽"); return false; }
+  S.shown[key] = res.list[0];
+  S.custom[key] = true;
+  S.roll[key]++;
+  return true;
+}
+function resetTodayCfg(key){
+  S.todayCfg[key] = {odd: "any", big: "any", zone: [0, 0, 0], sumMin: "", sumMax: ""};
+  S.custom[key] = false;
+  var base = D.today[key];
+  S.shown[key] = S.exclude[key] && base.excluded
+    ? {front: base.excluded.front.slice(), back: base.excluded.back.slice()}
+    : {front: base.front.slice(), back: base.back.slice()};
+}
+function reroll(){
+  ["ssq", "dlt"].forEach(function(key){
+    if (S.custom[key]) { applyTodayCfg(key); } else { regenerate(key); }
+  });
+  renderToday();
+  toast("已按当前设置重新生成");
+}
+
+/* 奖级判定（与 pick.py 的 PRIZE_HIT / PRIZE_RULES 同源） */
+var PRIZE_AMT = {
+  ssq: {"一等奖": null, "二等奖": null, "三等奖": 3000, "四等奖": 200, "五等奖": 10, "六等奖": 5},
+  dlt: {"一等奖": null, "二等奖": null, "三等奖": 10000, "四等奖": 3000, "五等奖": 300,
+        "六等奖": 200, "七等奖": 100, "八等奖": 15, "九等奖": 5}
+};
+var PRIZE_HIT = {
+  ssq: [[6,1,"一等奖"],[6,0,"二等奖"],[5,1,"三等奖"],[5,0,"四等奖"],[4,1,"四等奖"],
+        [4,0,"五等奖"],[3,1,"五等奖"],[2,1,"六等奖"],[1,1,"六等奖"],[0,1,"六等奖"]],
+  dlt: [[5,2,"一等奖"],[5,1,"二等奖"],[5,0,"三等奖"],[4,2,"四等奖"],[4,1,"五等奖"],
+        [3,2,"六等奖"],[4,0,"七等奖"],[3,1,"八等奖"],[2,2,"八等奖"],[3,0,"九等奖"],
+        [2,1,"九等奖"],[1,2,"九等奖"],[0,2,"九等奖"]]
+};
+function judgePrize(key, hf, hb){
+  var t = PRIZE_HIT[key];
+  for (var i = 0; i < t.length; i++) if (t[i][0] === hf && t[i][1] === hb) return t[i][2];
+  return null;
+}
+function tierRank(key, name){
+  return Object.keys(PRIZE_AMT[key]).indexOf(name);  // 下标越小奖级越高
+}
+function parseNums(s, n){
+  if (!s) return [];
+  return s.split(/[\s,，、]+/).map(function(x){ return parseInt(x, 10); })
+    .filter(function(v){ return v >= 1 && v <= n && !isNaN(v); });
+}
+
+/* ---------- 选号过滤器 ---------- */
+function segGame(act, key){
+  return '<div class="seg">' +
+    '<button data-act="' + act + '" data-v="ssq" class="' + (key === "ssq" ? "on" : "") + '">双色球</button>' +
+    '<button data-act="' + act + '" data-v="dlt" class="' + (key === "dlt" ? "on" : "") + '">大乐透</button></div>';
+}
+function oddOptions(key, pick, sel, act){
+  pick = (pick == null) ? D[key].front.pick : pick;
+  sel = (sel == null) ? S.pickOdd : sel;
+  act = act || "pickOdd";
+  var presets = [["any", "任意"]];
+  for (var o = 0; o <= pick; o++) presets.push([o + ":" + (pick - o), o + ":" + (pick - o)]);
+  return presets.map(function(p){
+    return '<button data-act="' + act + '" data-v="' + p[0] + '" class="' + (sel === p[0] ? "on" : "") + '">' + p[1] + "</button>";
+  }).join("");
+}
+function bigOptions(key, pick, sel, act){
+  pick = (pick == null) ? D[key].front.pick : pick;
+  sel = (sel == null) ? S.pickBig : sel;
+  act = act || "pickBig";
+  var presets = [["any", "任意"]];
+  for (var b = 0; b <= pick; b++) presets.push([b + ":" + (pick - b), b + ":" + (pick - b)]);
+  return presets.map(function(p){
+    return '<button data-act="' + act + '" data-v="' + p[0] + '" class="' + (sel === p[0] ? "on" : "") + '">' + p[1] + "</button>";
+  }).join("");
+}
+function renderPick(){
+  var key = S.pickGame, g = D[key], fz = g.front;
+  var zl = fz.zones.map(function(z){ return z.label; }).join(" / ");
+  var html = "" +
+    segGame("pickGame", key) +
+    '<div class="card"><div class="card-h"><h2>选号过滤器</h2><span class="hint">' + esc(g.game) + "</span></div>" +
+    '<p class="scroll-hint" style="margin:0 0 10px">设定结构条件，从「历史分布加权」的号池里生成候选组合。' +
+      "这不改变中奖概率，只是按你的偏好筛选外观。</p>" +
+
+    '<label class="sim-lab">排除上一期 7 个号码</label>' +
+    '<div class="mode-row">' +
+      '<button class="btn ' + (S.pickExcl ? "on-mode" : "ghost") + '" data-act="pickExcl" data-v="1">开启</button>' +
+      '<button class="btn ' + (S.pickExcl ? "ghost" : "on-mode") + '" data-act="pickExcl" data-v="0">关闭</button></div>' +
+
+    '<label class="sim-lab">前区奇偶比</label>' +
+    '<div class="seg tiny">' + oddOptions(key) + "</div>" +
+
+    '<label class="sim-lab">前区三区（' + zl + '）每区至少</label>' +
+    '<div class="zone-min" id="pickZone">' +
+      fz.zones.map(function(){ return '<input type="number" min="0" max="' + fz.pick + '" value="1">'; }).join("<span>·</span>") +
+    "</div>" +
+
+    '<label class="sim-lab">前区大小比（大号 > ' + fz.smallMax + '）</label>' +
+    '<div class="seg tiny">' + bigOptions(key) + "</div>" +
+
+    '<div class="mini-in"><label>和值下限</label><input type="number" id="pickSumMin" value="' + Math.round(fz.sumDist.p5) + '">' +
+      '<label>和值上限</label><input type="number" id="pickSumMax" value="' + Math.round(fz.sumDist.p95) + '"></div>' +
+
+    '<div class="mini-in"><label>连号对数</label><input type="number" id="pickConsec" min="0" placeholder="不限">' +
+      '<span>0=无连号，留空=不限</span></div>' +
+
+    '<label class="sim-lab">必含号码（逗号/空格分隔，前区）</label>' +
+    '<input class="frow" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;' +
+      'font-size:13px;font-variant-numeric:tabular-nums" id="pickInclude" placeholder="如 3 8 21">' +
+
+    '<label class="sim-lab" style="margin-top:8px">排除号码（同上）</label>' +
+    '<input style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;' +
+      'font-size:13px;font-variant-numeric:tabular-nums" id="pickExclude" placeholder="如 1 33">' +
+
+    '<div class="divider" style="margin:14px 0 10px"><span>' + esc(g.back.label) + '结构条件</span></div>' +
+    '<label class="sim-lab">后区奇偶比</label>' +
+    '<div class="seg tiny">' + oddOptions(key, g.back.pick, S.pickBackOdd, "pickBackOdd") + "</div>" +
+    '<label class="sim-lab" style="margin-top:6px">后区大小比（大号 > ' + g.back.smallMax + '）</label>' +
+    '<div class="seg tiny">' + bigOptions(key, g.back.pick, S.pickBackBig, "pickBackBig") + "</div>" +
+    '<p class="scroll-hint" style="margin:6px 0 0">后区约束同样只改变外观分布，不改变中奖概率。</p>' +
+
+    '<div class="mini-in" style="margin-top:10px"><label>生成组数</label>' +
+      '<input type="number" id="pickCount" min="1" max="20" value="' + S.pickCount + '"></div>' +
+    '<button class="btn primary" style="width:100%" data-act="pickGen">生成候选组合</button>' +
+    '<div id="pickOut"></div></div>';
+  q("#view-pick").innerHTML = html;
+}
+function filteredOk(f, opts, cfg){
+  var p = profileOf(f, cfg);
+  if (opts.odd !== null && p.odd !== opts.odd) return false;
+  if (opts.big !== null && f.filter(function(v){ return v > cfg.smallMax; }).length !== opts.big) return false;
+  for (var i = 0; i < cfg.zones.length; i++) if (p.zones[i] < opts.zoneMin[i]) return false;
+  var s = p.sum;
+  if (s < opts.sumMin || s > opts.sumMax) return false;
+  if (opts.consec !== null) {
+    var cnt = 0, nums = f.slice().sort(function(a, b){ return a - b; });
+    for (var j = 0; j < nums.length - 1; j++) if (nums[j + 1] - nums[j] === 1) cnt++;
+    if (cnt !== opts.consec) return false;
+  }
+  if (opts.include.length) {
+    var set = new Set(f);
+    for (var k = 0; k < opts.include.length; k++) if (!set.has(opts.include[k])) return false;
+  }
+  return true;
+}
+function genFiltered(key, opts){
+  var g = D[key], fz = g.front, bz = g.back;
+  // 归一化：调用方漏传字段时按「无约束」处理，避免 undefined 被误判为生效约束
+  opts = opts || {};
+  opts.odd = opts.odd == null ? null : opts.odd;
+  opts.big = opts.big == null ? null : opts.big;
+  opts.zoneMin = opts.zoneMin || fz.zones.map(function(){ return 0; });
+  opts.sumMin = opts.sumMin == null ? 0 : opts.sumMin;
+  opts.sumMax = opts.sumMax == null ? 999999 : opts.sumMax;
+  opts.consec = opts.consec == null ? null : opts.consec;
+  opts.include = opts.include || [];
+  opts.exclude = opts.exclude || [];
+  var cfg = {n: fz.n, pick: fz.pick, zones: fz.zones.map(function(z){ return [z.lo, z.hi]; }), smallMax: fz.smallMax};
+  var bcfg = {n: bz.n, pick: bz.pick, zones: bz.zones.map(function(z){ return [z.lo, z.hi]; }), smallMax: bz.smallMax};
+  var backOddSrc = opts.backOdd != null ? opts.backOdd : S.pickBackOdd;
+  var backBigSrc = opts.backBig != null ? opts.backBig : S.pickBackBig;
+  var bopts = {
+    odd: backOddSrc === "any" ? null : (backOddSrc.split(":")[0] | 0),
+    big: backBigSrc === "any" ? null : (backBigSrc.split(":")[0] | 0),
+    zoneMin: bz.zones.map(function(){ return 0; }),
+    sumMin: 0, sumMax: 999999, consec: null, include: []
+  };
+  var excl = new Set(opts.excludeLast ? D[key].latest.front.concat(D[key].latest.back) : []);
+  opts.exclude.forEach(function(v){ excl.add(v); });
+  var seed = (dateSeed() + ({ssq: 1, dlt: 2})[key] + (S.pickSeed[key]++)) >>> 0;
+  var results = [], attempt = 0;
+  while (results.length < opts.count && attempt < 6000) {
+    attempt++;
+    var rng = mulberry32((seed + attempt * 2654435761) >>> 0);
+    var f = sampleWeightedEx(rng, W[key].front, excl, fz.pick);
+    if (f.length < fz.pick) continue;
+    if (!filteredOk(f, opts, cfg)) continue;
+    var b = sampleWeightedEx(rng, W[key].back, excl, bz.pick);
+    if (b.length < bz.pick) continue;
+    if (!filteredOk(b, bopts, bcfg)) continue;
+    results.push({front: f, back: b});
+  }
+  return {list: results, attempts: attempt};
+}
+function renderPickOut(key, opts, res){
+  var out = q("#pickOut");
+  if (!out) return;
+  if (!res.list.length) {
+    out.innerHTML = '<div class="msg err">在当前条件下没能生成候选（可能条件相互冲突或过于苛刻）。' +
+      "试试放宽和值范围、关掉「必含」，或把每区至少调回 1。</div>";
+    return;
+  }
+  var g = D[key], fz = g.front, bz = g.back;
+  var cfg = {zones: fz.zones.map(function(z){ return [z.lo, z.hi]; }), smallMax: fz.smallMax};
+  var bcfg = {zones: bz.zones.map(function(z){ return [z.lo, z.hi]; }), smallMax: bz.smallMax};
+  var body = res.list.map(function(set){
+    var p = profileOf(set.front, cfg);
+    var bp = profileOf(set.back, bcfg);
+    var big = set.front.filter(function(v){ return v > fz.smallMax; }).length;
+    var bbig = set.back.filter(function(v){ return v > bz.smallMax; }).length;
+    return '<div class="gen"><div class="balls">' + ballsHTML(set.front, "sm red") +
+      (set.back.length ? '<span class="sep">+</span>' + ballsHTML(set.back, "sm blue") : "") + "</div>" +
+      '<div class="gen-meta"><span class="gen-ok">✓ 满足全部条件</span>' +
+      "<span>前奇偶 " + p.odd + ":" + p.even + "</span><span>前区三区 " + p.zones.join("-") +
+      "</span><span>前和值 " + p.sum + "</span><span>前大号 " + big + "</span>" +
+      (set.back.length ? "<span>后奇偶 " + bp.odd + ":" + bp.even + "</span><span>后大号 " + bbig + "</span>" : "") +
+      "</div></div>";
+  }).join("");
+  out.innerHTML = '<div class="card"><div class="card-h"><h2>生成结果</h2>' +
+    '<span class="hint">' + res.list.length + " 组 · 尝试 " + res.attempts + " 次</span></div>" + body +
+    '<p class="scroll-hint">每组都是按历史分布加权的随机抽样，仅满足你设定的结构条件；' +
+    "中奖概率与任意组合相同。</p></div>";
+}
+function pickGen(){
+  var key = S.pickGame, g = D[key], fz = g.front;
+  var opts = {
+    excludeLast: S.pickExcl,
+    odd: S.pickOdd === "any" ? null : (S.pickOdd.split(":")[0] | 0),
+    big: S.pickBig === "any" ? null : (S.pickBig.split(":")[0] | 0),
+    zoneMin: qa("#pickZone input").map(function(i){ return Number(i.value) || 0; }),
+    sumMin: Number(q("#pickSumMin").value) || 0,
+    sumMax: Number(q("#pickSumMax").value) || 9999,
+    consec: q("#pickConsec").value === "" ? null : Number(q("#pickConsec").value),
+    include: parseNums(q("#pickInclude").value, fz.n),
+    exclude: parseNums(q("#pickExclude").value, fz.n),
+    count: Math.max(1, Math.min(20, Number(q("#pickCount").value) || 5))
+  };
+  S.pickCount = opts.count;
+  renderPickOut(key, opts, genFiltered(key, opts));
+}
+
+/* ---------- 历史查询 + 中奖核对 ---------- */
+function renderCheck(){
+  var key = S.checkGame, g = D[key];
+  var html = "" +
+    segGame("checkGame", key) +
+    '<div class="card"><div class="card-h"><h2>历史开奖查询</h2><span class="hint">' + g.count + " 期</span></div>" +
+    '<input class="frow" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;' +
+      'font-size:13px" id="hvSearch" placeholder="输入期号或日期（如 2026 或 10-31）">' +
+    '<div id="hvList" class="tbl-wrap" style="max-height:300px;margin-top:8px"></div>' +
+    '<p class="scroll-hint">列表按开奖时间倒序；输入可过滤期号 / 日期。</p></div>' +
+
+    '<div class="card"><div class="card-h"><h2>中奖核对</h2><span class="hint">' + esc(g.game) + "</span></div>" +
+    '<p class="scroll-hint" style="margin:0 0 8px">输入你买的号码，自动比对全部历史开奖，' +
+      "统计中奖期数与奖级分布。浮动奖按当期计，不计入估算总额。</p>" +
+    '<label class="sim-lab">' + esc(g.front.label) + "（" + g.front.pick + " 个，" + g.front.n + " 选 " + g.front.pick + "）</label>" +
+    '<input style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;' +
+      'font-size:13px;font-variant-numeric:tabular-nums" id="chkFront" placeholder="空格或逗号分隔，如 3 8 12 19 22 30">' +
+    '<label class="sim-lab" style="margin-top:8px">' + esc(g.back.label) + "（" + g.back.pick + " 个，" + g.back.n + " 选 " + g.back.pick + "）</label>" +
+    '<input style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:9px;' +
+      'font-size:13px;font-variant-numeric:tabular-nums" id="chkBack" placeholder="如 ' + (g.back.pick === 1 ? "7" : "3 11") + '">' +
+    '<div class="mini-in" style="margin-top:10px"><label>核对范围</label>' +
+      '<select id="chkRange" style="padding:7px 8px;border:1px solid var(--line);border-radius:8px;' +
+      'font-size:13px;background:#fff;color:var(--ink)">' +
+      '<option value="0">全部历史</option><option value="100">最近 100 期</option>' +
+      '<option value="300">最近 300 期</option></select></div>' +
+    '<button class="btn primary" style="width:100%" data-act="checkRun">开始核对</button>' +
+    '<div id="chkOut"></div></div>' +
+
+    '<div class="card"><div class="card-h"><h2>我的收藏</h2>' + segGame("collGame", S.collGame) + '</div>' +
+      '<p class="scroll-hint" style="margin:0 0 8px">保存多组号码后，可一键对比各组对历史开奖的命中情况（仅保存在本机浏览器，不会上传）。</p>' +
+      '<div id="collList"></div>' +
+      '<button class="btn primary" style="width:100%;margin-top:8px" data-act="collCompare">对比全部收藏命中</button>' +
+      '<div id="collCmp"></div></div>';
+  q("#view-check").innerHTML = html;
+  renderHistory(key, "");
+  renderCollections();
+}
+function renderHistory(key, filter){
+  var draws = D[key].draws;
+  var f = (filter || "").trim();
+  var WD = ["周日","周一","周二","周三","周四","周五","周六"];
+  var rows = "";
+  var shown = 0;
+  for (var i = draws.length - 1; i >= 0 && shown < 2000; i--) {
+    var d = draws[i];
+    if (f && (("" + d.issue).indexOf(f) < 0) && (("" + d.date).indexOf(f) < 0)) continue;
+    var wd = "";
+    try { wd = " " + WD[new Date(d.date.replace(/-/g, "/")).getDay()]; } catch (e) {}
+    rows += '<div class="hv"><div class="hv-top"><span class="hv-iss">第 ' + esc(d.issue) + " 期</span>" +
+      '<span class="hv-date">' + esc(d.date) + wd + "</span></div>" +
+      '<div class="balls">' + ballsHTML(d.front, "sm red") + '<span class="sep">+</span>' +
+      ballsHTML(d.back, "sm blue") + "</div></div>";
+    shown++;
+  }
+  var box = q("#hvList");
+  if (box) { box.innerHTML = rows || '<p class="scroll-hint">无匹配结果。</p>'; box.scrollTop = 0; }
+}
+function computeHit(key, mf, mb, range){
+  var draws = D[key].draws;
+  var start = range > 0 ? Math.max(0, draws.length - range) : 0;
+  var total = 0, floatingCt = 0, best = null, counts = {};
+  var setf = new Set(mf), setb = new Set(mb);
+  for (var i = start; i < draws.length; i++) {
+    var d = draws[i], hf = 0, hb = 0;
+    d.front.forEach(function(v){ if (setf.has(v)) hf++; });
+    d.back.forEach(function(v){ if (setb.has(v)) hb++; });
+    var name = judgePrize(key, hf, hb);
+    if (name) {
+      total++;
+      counts[name] = (counts[name] || 0) + 1;
+      if (PRIZE_AMT[key][name] == null) floatingCt++;
+      if (!best || tierRank(key, name) < tierRank(key, best)) best = name;
+    }
+  }
+  var amt = 0;
+  for (var nm in counts) { var a = PRIZE_AMT[key][nm]; if (a != null) amt += a * counts[nm]; }
+  return {total: total, best: best, counts: counts, amt: amt, floatingCt: floatingCt,
+          span: range > 0 ? range : draws.length};
+}
+function checkRun(){
+  var key = S.checkGame, g = D[key], fz = g.front, bz = g.back;
+  var mf = parseNums(q("#chkFront").value, fz.n);
+  var mb = parseNums(q("#chkBack").value, bz.n);
+  var out = q("#chkOut");
+  if (mf.length !== fz.pick) {
+    out.innerHTML = '<div class="msg err">' + esc(g.front.label) + "需正好 " + fz.pick + " 个（当前 " + mf.length + " 个）。</div>";
+    return;
+  }
+  if (mb.length !== bz.pick) {
+    out.innerHTML = '<div class="msg err">' + esc(g.back.label) + "需正好 " + bz.pick + " 个（当前 " + mb.length + " 个）。</div>";
+    return;
+  }
+  if (new Set(mf).size !== mf.length) {
+    out.innerHTML = '<div class="msg err">' + esc(g.front.label) + "不能有重复号码（重复视为无效选号）。</div>";
+    return;
+  }
+  if (new Set(mb).size !== mb.length) {
+    out.innerHTML = '<div class="msg err">' + esc(g.back.label) + "不能有重复号码（重复视为无效选号）。</div>";
+    return;
+  }
+  var range = Number(q("#chkRange").value) || 0;
+  var r = computeHit(key, mf, mb, range);
+  S.lastCheck = {key: key, front: mf, back: mb};
+  var tiers = Object.keys(PRIZE_AMT[key]);
+  var breakdown = tiers.map(function(nm){
+    var c = r.counts[nm] || 0;
+    return '<div class="tier-row"><span>' + nm + (PRIZE_AMT[key][nm] == null ? "（浮动）" : "") +
+      "</span><span>" + (c ? "<b>" + c + "</b> 期" : "0 期") + "</span></div>";
+  }).join("");
+  out.innerHTML = '<div class="card"><div class="card-h"><h2>核对结果</h2>' +
+    '<span class="hint">' + (range > 0 ? "最近 " + range + " 期" : "全部 " + D[key].draws.length + " 期") + "</span></div>" +
+    '<div class="chk-sum">你的号码：' + ballsHTML(mf, "sm red") +
+      (mb.length ? '<span class="sep">+</span>' + ballsHTML(mb, "sm blue") : "") + "</div>" +
+    '<div class="chk-sum" style="margin-top:6px">核对 <b>' + r.span + "</b> 期 · 任意奖级命中 <b>" + r.total +
+      "</b> 期 · 最佳 <b>" + (r.best || "无") + "</b></div>" +
+    '<div class="chk-sum">估算总奖金（固定奖）：<b>' + fmtInt(r.amt) + " 元</b>" +
+      (r.floatingCt ? "（另含浮动奖 " + r.floatingCt + " 期，按当期计不计入）" : "") + "</div>" +
+    '<div style="margin-top:8px">' + breakdown + "</div>" +
+    '<button class="btn ghost" style="margin-top:10px" data-act="collSave">保存到收藏</button>' +
+    '<p class="scroll-hint" style="margin-top:8px">以上是基于已开奖历史的比对，纯属事后统计；' +
+    "开奖独立，与未来无关。浮动奖（一/二等奖等）以官方当期为准。</p></div>";
+}
+
+/* ---------- 号码收藏 + 多组对比 ---------- */
+function loadCollections(){
+  try {
+    var raw = localStorage.getItem("lottery_collections");
+    var a = raw ? JSON.parse(raw) : [];
+    return Array.isArray(a) ? a : [];
+  } catch (e) { return []; }
+}
+function saveCollections(){
+  try { localStorage.setItem("lottery_collections", JSON.stringify(S.collections)); } catch (e) {}
+}
+function renderCollections(){
+  var box = q("#collList");
+  if (!box) return;
+  var list = S.collections.filter(function(c){ return c.key === S.collGame; });
+  if (!list.length) {
+    box.innerHTML = '<p class="scroll-hint">还没有收藏。核对一组号码后点「保存到收藏」即可加入（仅保存在本机浏览器）。</p>';
+    return;
+  }
+  box.innerHTML = list.map(function(c){
+    var realIdx = S.collections.indexOf(c);
+    return '<div class="coll-row"><div class="balls" style="justify-content:flex-start">' + ballsHTML(c.front, "sm red") +
+      (c.back && c.back.length ? '<span class="sep">+</span>' + ballsHTML(c.back, "sm blue") : "") + "</div>" +
+      '<button class="btn tiny ghost" data-act="collDel" data-i="' + realIdx + '">删除</button></div>';
+  }).join("");
+}
+function compareCollections(){
+  var key = S.collGame, box = q("#collCmp");
+  if (!box) return;
+  var list = S.collections.filter(function(c){ return c.key === key; });
+  if (!list.length) { box.innerHTML = '<div class="msg err">「' + esc(D[key].game) + '」下还没有收藏号码。</div>'; return; }
+  var rangeEl = q("#chkRange");
+  var range = rangeEl ? (Number(rangeEl.value) || 0) : 0;
+  var rows = list.map(function(c){
+    var r = computeHit(key, c.front, c.back, range);
+    var balls = '<div class="balls" style="justify-content:flex-start">' + ballsHTML(c.front, "sm red") +
+      (c.back && c.back.length ? '<span class="sep">+</span>' + ballsHTML(c.back, "sm blue") : "") + "</div>";
+    return "<tr><td>" + balls + "</td><td><b>" + r.total + "</b> 期</td><td>" + (r.best || "无") +
+      "</td><td>" + fmtInt(r.amt) + " 元" + (r.floatingCt ? "（含浮动 " + r.floatingCt + "）" : "") + "</td></tr>";
+  }).join("");
+  box.innerHTML = '<div class="card" style="margin-top:8px"><div class="card-h"><h2>收藏对比</h2>' +
+    '<span class="hint">' + esc(D[key].game) + " · " + (range > 0 ? "最近 " + range + " 期" : "全部 " + D[key].draws.length + " 期") + "</span></div>" +
+    '<table class="cmp-tbl"><thead><tr><th>号码</th><th>命中</th><th>最佳</th><th>固定奖估算</th></tr></thead><tbody>' +
+    rows + "</tbody></table>" +
+    '<p class="scroll-hint" style="margin-top:8px">对比仅基于已开奖历史的事后统计；各组合中奖概率完全相同。</p></div>';
+}
+
+/* ---------------- 事件 ---------------- */
+function switchTab(tab){
+  S.tab = tab;
+  qa(".tabbar button").forEach(function(b){
+    b.classList.toggle("on", b.dataset.tab === tab);
+  });
+  qa(".view").forEach(function(v){
+    v.classList.toggle("on", v.id === "view-" + tab);
+  });
+  if (tab === "today") renderToday();
+  if (tab === "stats") renderStats();
+  if (tab === "trend") renderTrend();
+  if (tab === "dantuo") renderDantuo();
+  if (tab === "sim") renderSim();
+  if (tab === "guard") renderGuard();
+  if (tab === "about") renderAbout();
+  if (tab === "pick") renderPick();
+  if (tab === "check") renderCheck();
+  if (tab === "wiki") renderWiki();
+  window.scrollTo(0, 0);
+}
+
+function copyText(text){
+  return new Promise(function(resolve){
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function(){ resolve(true); }, function(){ resolve(false); });
+    } else { resolve(false); }
+  }).then(function(ok){
+    if (ok) return true;
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.top = "-1000px";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      ta.setSelectionRange(0, text.length);
+      var done = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return done;
+    } catch (e) { return false; }
+  });
+}
+
+document.addEventListener("click", function(e){
+  var btn = e.target.closest ? e.target.closest("[data-act]") : null;
+  if (!btn) return;
+  var act = btn.dataset.act;
+
+  if (act === "tab") { switchTab(btn.dataset.tab); return; }
+
+  if (act === "wikiGame") { S.wikiGame = btn.dataset.g; renderWiki(); return; }
+
+  if (act === "copy") {
+    var key = btn.dataset.game;
+    var t = D.today[key];
+    var sh = S.shown[key];
+    var txt = D[key].game + " 第" + t.nextIssue + "期 " +
+      sh.front.map(pad).join(" ") + " + " + sh.back.map(pad).join(" ");
+    copyText(txt).then(function(ok){
+      toast(ok ? "已复制：" + txt : "复制失败，请长按号码手动选取");
+    });
+    return;
+  }
+
+  if (act === "exclGame") {
+    var k = btn.dataset.v;
+    S.exclude[k] = !S.exclude[k];
+    var base = D.today[k];
+    if (S.custom[k]) {
+      // 自定义条件生效中：按新排除设置重新生成
+      applyTodayCfg(k);
+    } else if (S.exclude[k] && base.excluded) {
+      // 直接展示后端 pick.py 算好的「排除上期 7 个号」版本
+      S.shown[k] = {front: base.excluded.front.slice(), back: base.excluded.back.slice()};
+    } else {
+      S.shown[k] = {front: base.front.slice(), back: base.back.slice()};
+    }
+    renderToday();
+    return;
+  }
+  if (act === "tzOdd") { S.todayCfg[btn.dataset.g].odd = btn.dataset.v; renderToday(); return; }
+  if (act === "tzBig") { S.todayCfg[btn.dataset.g].big = btn.dataset.v; renderToday(); return; }
+  if (act === "tzApply") { if (applyTodayCfg(btn.dataset.g)) renderToday(); return; }
+  if (act === "tzReset") { resetTodayCfg(btn.dataset.g); renderToday(); return; }
+  if (act === "reroll") { reroll(); return; }
+  if (act === "pickGame") { S.pickGame = btn.dataset.v; renderPick(); return; }
+  if (act === "pickExcl") { S.pickExcl = btn.dataset.v === "1"; renderPick(); return; }
+  if (act === "pickBackOdd") { S.pickBackOdd = btn.dataset.v; renderPick(); return; }
+  if (act === "pickBackBig") { S.pickBackBig = btn.dataset.v; renderPick(); return; }
+  if (act === "pickOdd") { S.pickOdd = btn.dataset.v; renderPick(); return; }
+  if (act === "pickBig") { S.pickBig = btn.dataset.v; renderPick(); return; }
+  if (act === "pickGen") { pickGen(); return; }
+  if (act === "checkGame") { S.checkGame = btn.dataset.v; renderCheck(); return; }
+  if (act === "checkRun") { checkRun(); return; }
+
+  if (act === "collGame") {
+    S.collGame = btn.dataset.v;
+    qa('[data-act="collGame"]').forEach(function(b){ b.classList.toggle("on", b.dataset.v === S.collGame); });
+    renderCollections();
+    var cc = q("#collCmp"); if (cc) cc.innerHTML = "";
+    return;
+  }
+  if (act === "collSave") {
+    if (!S.lastCheck) { toast("请先点「开始核对」生成一组号码"); return; }
+    var lc = S.lastCheck;
+    var dup = S.collections.some(function(c){
+      return c.key === lc.key && JSON.stringify(c.front) === JSON.stringify(lc.front) &&
+        JSON.stringify(c.back) === JSON.stringify(lc.back);
+    });
+    if (dup) { toast("该组已在收藏中"); return; }
+    S.collections.push({key: lc.key, front: lc.front.slice(), back: lc.back.slice()});
+    saveCollections();
+    if (S.collGame !== lc.key) { S.collGame = lc.key; }
+    renderCollections();
+    toast("已保存到收藏");
+    return;
+  }
+  if (act === "collDel") {
+    var di = Number(btn.dataset.i);
+    if (di >= 0 && di < S.collections.length) {
+      S.collections.splice(di, 1);
+      saveCollections();
+      renderCollections();
+    }
+    return;
+  }
+  if (act === "collCompare") { compareCollections(); return; }
+
+  if (act === "statGame") { S.statGame = btn.dataset.v; renderStats(); return; }
+  if (act === "statZone") { S.statZone = btn.dataset.v; renderStats(); return; }
+  if (act === "trendGame") { S.trendGame = btn.dataset.v; renderTrend(); return; }
+  if (act === "trendSpan") { S.trendSpan = Number(btn.dataset.v); renderTrend(); return; }
+  if (act === "simGame") { S.simGame = btn.dataset.v; S.simDone = false; renderSim(); return; }
+  if (act === "simRun") { runSim(); return; }
+  if (act === "guardGame") { S.guardGame = btn.dataset.v; renderGuard(); return; }
+
+  if (act === "dtGame") { S.dtGame = btn.dataset.v; renderDantuo(); return; }
+  if (act === "dtMode") { S.dtMode = btn.dataset.v; renderDantuo(); return; }
+  if (act === "dtClear") {
+    S.dt[S.dtGame] = {dan: [], tuo: [], back: []};
+    renderDantuo();
+    return;
+  }
+  if (act === "dtLoad") {
+    var rec = D.today[S.dtGame].dantuo;
+    S.dt[S.dtGame] = {dan: rec.dan.slice(), tuo: rec.tuo.slice(), back: rec.back.slice()};
+    renderDantuo();
+    toast("已载入今日推荐胆拖");
+    return;
+  }
+  if (act === "dtBall") {
+    var st = S.dt[S.dtGame], c = dtCfg(S.dtGame), num = Number(btn.dataset.n);
+    var di = st.dan.indexOf(num), ti = st.tuo.indexOf(num);
+    if (di >= 0) { st.dan.splice(di, 1); }
+    else if (ti >= 0) { st.tuo.splice(ti, 1); }
+    else if (S.dtMode === "dan") {
+      if (st.dan.length >= c.danMax) { toast("胆码最多 " + c.danMax + " 个"); return; }
+      st.dan.push(num);
+    } else {
+      if (st.dan.length + st.tuo.length >= c.n) { toast("号码已选满"); return; }
+      st.tuo.push(num);
+    }
+    st.dan.sort(function(a, b){ return a - b; });
+    st.tuo.sort(function(a, b){ return a - b; });
+    renderDantuo();
+    return;
+  }
+  if (act === "dtBack") {
+    var st2 = S.dt[S.dtGame], c2 = dtCfg(S.dtGame), n2 = Number(btn.dataset.n);
+    var bi = st2.back.indexOf(n2);
+    // 后区一律多选语义：已选则移除，未选则追加。
+    // 注数由 C(后区个数, backPick) 决定，SSQ 选 2 个蓝球即 C(2,1)=2 倍。
+    if (bi >= 0) { st2.back.splice(bi, 1); }
+    else if (st2.back.length < c2.backN) { st2.back.push(n2); }
+    st2.back.sort(function(a, b){ return a - b; });
+    renderDantuo();
+    return;
+  }
+});
+
+document.addEventListener("input", function(e){
+  var t = e.target;
+  if (t && t.dataset && t.dataset.bud) {
+    var b = readBudget();
+    b[t.dataset.bud] = Number(t.value) || 0;
+    saveBudget(b);
+    updateBudget();
+    return;
+  }
+  if (t && t.id === "gbudget") {
+    S.guardBudget = Number(t.value) || 0;
+    guardBudgetRender();
+    return;
+  }
+  if (t && t.id && t.id.indexOf("tz-") === 0) {
+    var pp = t.id.split("-");
+    var ck = pp[1] === "zone" ? pp[2] : pp[1];
+    var cc = S.todayCfg[ck];
+    if (!cc) return;
+    if (pp[1] === "zone") cc.zone[Number(pp[3])] = Math.max(0, Number(t.value) || 0);
+    else if (pp[1] === "summin") cc.sumMin = t.value.trim();
+    else if (pp[1] === "summax") cc.sumMax = t.value.trim();
+    return;
+  }
+  if (t && t.id === "hvSearch") { renderHistory(S.checkGame, t.value); return; }
+  if (t && t.id === "eggDate") {
+    var out = q("#eggOut");
+    var r = calcEgg(t.value);
+    if (!out) return;
+    if (!r) { out.innerHTML = ""; return; }
+    out.innerHTML =
+      '<div class="egg-out">' +
+        '<div class="egg-item"><span>生肖</span><b>' + esc(r.zodiac) + "</b></div>" +
+        '<div class="egg-item"><span>星座</span><b>' + esc(r.cons) + "</b></div>" +
+        '<div class="egg-item"><span>生命灵数</span><b>' + r.lifeNum + "</b></div>" +
+        '<div class="egg-item"><span>幸运色</span><b><i style="display:inline-block;width:9px;' +
+          "height:9px;border-radius:2px;background:" + r.colorHex + ';margin-right:5px"></i>' +
+          esc(r.color) + "</b></div>" +
+      "</div>" +
+      '<div class="balls" style="margin-top:10px">' +
+        r.lucky.map(function(n){ return '<span class="ball soft-blue">' + pad(n) + "</span>"; }).join("") +
+      "</div>" +
+      '<p class="scroll-hint">以上“幸运数”仅为装饰，不参与选号计算。</p>';
+  }
+});
+
+/* ---------------- 启动 ---------------- */
+function boot(){
+  if (!D || !D.today) {
+    document.body.insertAdjacentHTML("afterbegin",
+      '<p style="padding:20px;color:#a12a2a">数据未注入，请先运行 build.py 生成页面。</p>');
+    return;
+  }
+  var stale = D.meta.stale || {};
+  if (stale.ssq || stale.dlt) q("#liveDot").classList.add("stale");
+  buildAllWeights();
+  S.shown = {
+    ssq: {front: D.today.ssq.front.slice(), back: D.today.ssq.back.slice()},
+    dlt: {front: D.today.dlt.front.slice(), back: D.today.dlt.back.slice()}
+  };
+  S.exclude = {ssq: false, dlt: false};
+  S.roll = {ssq: 0, dlt: 0};
+  S.custom = {ssq: false, dlt: false};
+  renderToday();
+  // 预渲染其它页签，避免首次切换闪烁
+  renderStats(); renderTrend(); renderDantuo(); renderSim(); renderGuard(); renderAbout();
+  renderPick(); renderCheck();
+}
+
+boot();
+})();
+</script>
+</body>
+</html>

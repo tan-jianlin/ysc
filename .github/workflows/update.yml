@@ -1,0 +1,43 @@
+name: Daily Lottery Update
+
+on:
+  schedule:
+    - cron: "0 0 * * *"   # UTC 00:00 = 北京 08:00
+  workflow_dispatch: {}     # 允许在 GitHub 网页手动触发一次
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout lottery branch
+        uses: actions/checkout@v4
+        with:
+          ref: lottery
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build (fetch latest draws + rebuild page)
+        run: python build.py --fetch-timeout 120
+
+      - name: Stage artifact
+        run: cp dist/index.html index.html
+
+      - name: Commit & push only if data changed
+        run: |
+          git config user.name "lottery-bot"
+          git config user.email "lottery-bot@users.noreply.github.com"
+          git add -A
+          # 只在数据真正变化时提交，避免 generated 时间戳导致无限循环
+          if git diff --cached --quiet data/; then
+            echo "no data change today, skip push"
+            exit 0
+          fi
+          git commit -m "auto: update lottery data $(date +%F)"
+          git push
