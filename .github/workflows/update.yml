@@ -33,6 +33,7 @@ jobs:
         run: |
           git config user.name "lottery-bot"
           git config user.email "lottery-bot@users.noreply.github.com"
+          git pull --rebase origin lottery || true
           git add -A
           # 只在数据真正变化时提交，避免 generated 时间戳导致无限循环
           if git diff --cached --quiet data/; then
