@@ -1,0 +1,42 @@
+name: Deploy to GitHub Pages
+
+# 触发：本机 update_loop.ps1 每天 08:00 抓取最新开奖、重建并推送到 lottery 分支，
+# 这里的 Actions 就在 GitHub 云端把最新 index.html 发布到 Pages（首次运行自动开启 Pages，无需任何手动设置）。
+on:
+  push:
+    branches: [lottery]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout lottery branch
+        uses: actions/checkout@v4
+        with:
+          ref: lottery
+          fetch-depth: 0
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
