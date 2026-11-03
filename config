@@ -2,6 +2,10 @@
   "storeName": "本地聚合",
   "urls": [
     {
+      "name": "Lightconer聚合(每日自动更新)",
+      "url": "https://cdn.jsdelivr.net/gh/Lightconer/tvbox-ysc-config@main/output/%E5%8D%95%E4%BB%93%E8%81%9A%E5%90%88.json"
+    },
+    {
       "name": "饭太硬多仓",
       "url": "http://饭太硬.top/tv"
     },
@@ -10,16 +14,8 @@
       "url": "https://raw.githubusercontent.com/TVboxorg/TVbox/main/dist/official.json"
     },
     {
-      "name": "运输车聚合",
-      "url": "https://tvkj.top/DC/ysc/tvkj/svip.json"
-    },
-    {
       "name": "巧儿影视",
       "url": "https://cdn.qiaoji8.com/tvbox.json"
-    },
-    {
-      "name": "欧歌多仓",
-      "url": "http://m.nxog.top/nxog/ou1.php?url=http://tv.nxog.top&b=欧歌"
     },
     {
       "name": "小马源",
