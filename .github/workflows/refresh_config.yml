@@ -1,0 +1,45 @@
+name: 影视仓源配置自动同步
+
+on:
+  schedule:
+    # 北京时间 01:00（UTC 17:00），与直播更新(北京时间 12:00)错峰，避免互相冲突
+    - cron: '0 17 * * *'
+  workflow_dispatch: # 允许手动触发
+
+# 与 update.yml 一致：新建仓库默认 GITHUB_TOKEN 对 contents 只读，必须显式开写
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 安装 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: 从 source_pool.json 重建 config
+        run: python .github/scripts/refresh_config.py
+
+      - name: 提交并推送（带 rebase 重试，防与直播更新冲突）
+        run: |
+          git config user.name "tan-jianlin"
+          git config user.email "auto@ysc.local"
+          git add config
+          git diff --staged --quiet && echo "config 无变化，跳过" && exit 0
+          git commit -m "auto sync config from source_pool $(date +%Y-%m-%d)"
+          for i in 1 2 3; do
+            git pull --rebase origin master || true
+            if git push origin HEAD:master; then
+              echo "推送成功"; exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::推送失败（可能与其他工作流冲突，明日重试）"
+          exit 1
