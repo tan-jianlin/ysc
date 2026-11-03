@@ -4,7 +4,7 @@ on:
     branches: [lottery]
   workflow_dispatch:
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
   administration: write
@@ -33,6 +33,16 @@ jobs:
             -d '{"build_type":"workflow"}')
           echo "enable_http=$CODE" | tee debug_pages.txt
           cat /tmp/resp.json | tee -a debug_pages.txt
+          # also probe GET /pages for current state
+          CODE2=$(curl -s -o /tmp/resp2.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            -H "User-Agent: pages-enabler" \
+            https://api.github.com/repos/tan-jianlin/ysc/pages)
+          echo "get_http=$CODE2" >> debug_pages.txt
+          cat /tmp/resp2.json >> debug_pages.txt
+          echo "token_scopes_check:" >> debug_pages.txt
+          curl -sI -H "Authorization: Bearer ${{ github.token }}" https://api.github.com/user | grep -iE "x-oauth-scopes|x-accepted|HTTP/" >> debug_pages.txt || true
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
