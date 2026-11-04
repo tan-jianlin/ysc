@@ -4,7 +4,10 @@ update_log.txt
 
 # 本机诊断输出：含 WiFi SSID/BSSID、内网 IP、设备型号、微信标识、本机路径等隐私信息，
 # 仓库是公开的，绝不能入库。
-_*.txt
+# 只挡 _*.txt 不够——_probe.json 就是 2026-10-17 被 squash_history.py 的 `git add -A`
+# 捎上公开仓库的。下划线前缀是本机诊断的命名约定，一律挡掉。
+_*
+!__pycache__/
 
 # Python 缓存
 __pycache__/

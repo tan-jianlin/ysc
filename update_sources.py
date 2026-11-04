@@ -74,6 +74,19 @@ LIVE_LIGHT_PATH = 'live_light.m3u'
 LIVE_LIGHT_SKIP_PREFIXES = ('☘️',)   # 各省频道分组前缀
 LIVE_LIGHT_SKIP_GROUPS = ('地方频道', '数字频道')
 
+# 绑定具体账号/机顶盒的查询参数。上游列表把这些原样夹带进来，仓库一推就等于
+# 替别人公开分发账号凭据（msisdn 是手机号哈希，migutoken/SecurityKey 是会话票）。
+# 2026-11-04 实测：带这类参数的 116 条里 115 条本来就播不出来——
+# 咪咕 GSLB 全 HTTP 660（签名过期）、migu.188766.xyz 域名已不存在、cmread 403、
+# freetv.top 512、移动 IPv6 段 [2409:8087:...] 在电信线上直接超时。
+# 所以整条删掉不减少任何可用频道，只是把别人的凭据从公开仓库里拿掉。
+LIVE_PRIVATE_PARAMS = ('msisdn', 'mdspid', 'stbid', 'iashttpsessionid', 'migutoken',
+                       'mtv_session', 'hms_devid', 'icpid', 'mac', 'encrypt',
+                       'securitykey', 'assertid', 'authinfo')
+# 只是冗余、实测去掉仍能取到 #EXTM3U（livehwc3 那条）：剥参数、留频道。
+# 注意 auth_key 不在这个名单里——华为云/quklive/scrstv 靠它鉴权，去掉就 403。
+LIVE_STRIP_PARAMS = ('user_session_id',)
+
 # 直播源直链的镜像模板（%s 处填 live_list.m3u / live_light.m3u）
 # 顺序即优先级：ghfast 直读 GitHub raw，永远最新；jsDelivr 系有独立缓存，只能当备用。
 LIVE_FEED_MIRRORS = [
@@ -852,11 +865,19 @@ def push_remotes():
         # live_light.m3u 等文件可能尚未生成，排除不存在的路径，避免 git add 整体失败
         # 脚本自身也一起提交：云端 CI 每天用仓库里的旧代码跑完再强推 Gitee，
         # 不把本机的 update_sources.py 带上，本机的改动第二天就会被覆盖回去。
-        addable = [p for p in ('update_sources.py', 'config', 'config_kids', 'status.json', 'remotes.json',
-                               'blocklist.json', 'known_sources.json',
+        # 2026-11-04 补全清单：refresh_config.yml / refresh_config.py / source_pool.json
+        # 原先只存在于 GitHub（本机没有副本），本机提交时索引里没它们，就会在 Gitee 上
+        # 反复出现"CI 推上去、本机又删掉"的抖动；两个 .bat 和 squash_history.py 同理，
+        # 不带上就会只在 Gitee 有、GitHub 没有。文件集一致了才谈得上哪侧掉链子都不丢东西。
+        addable = [p for p in ('update_sources.py', 'squash_history.py', 'config', 'config_kids',
+                               'status.json', 'remotes.json',
+                               'blocklist.json', 'known_sources.json', '.gitignore',
                                '.github/workflows/update.yml',
+                               '.github/workflows/refresh_config.yml',
+                               '.github/scripts/refresh_config.py', 'source_pool.json',
                                'mirror_paste.json',
-                               'live_list.m3u', 'live_light.m3u', 'live_source.json', 'live_full.json')
+                               'live_list.m3u', 'live_light.m3u', 'live_source.json', 'live_full.json',
+                               '全量复核黑名单.bat', '整理提交历史.bat')
                    if os.path.exists(os.path.join(BASE_DIR, p))]
         steps = [
             ['git', '-C', BASE_DIR, 'add'] + addable,
@@ -1214,6 +1235,73 @@ def prune_dead_overseas(text, timeout=5, workers=24):
     return '\n'.join(out) + '\n'
 
 
+def scrub_live_privates(text):
+    """删掉查询参数里绑定具体账号/机顶盒的频道，并剥掉实测无害的冗余参数。
+
+    必须放在写文件之前：仓库是公开的，还会经 jsDelivr / GitHub Pages 缓存扩散，
+    上游列表夹带的 msisdn / migutoken / stbId 一旦推上去，等于替别人公开分发凭据。
+    判据来自 2026-11-04 的实测（见 LIVE_PRIVATE_PARAMS 注释），这批源本身已经全死，
+    所以清洗只减凭据、不减频道。
+    """
+    out = []
+    pending = []          # 当前频道块里 URL 之前的 #EXTINF / #EXTVLCOPT 等行
+    dropped = {}          # 主机 -> 剔除条数
+    stripped = 0
+    total = 0
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.startswith('#'):
+            pending.append(line)
+            continue
+        total += 1
+        head, _, q = line.partition('?')
+        keys = {p.split('=', 1)[0].strip().lower() for p in q.split('&') if p}
+        hit = [p for p in LIVE_PRIVATE_PARAMS if p in keys]
+        if hit:
+            host = urllib.parse.urlparse(head).netloc or head[:40]
+            dropped[host] = dropped.get(host, 0) + 1
+            pending = []
+            continue
+        if keys & set(LIVE_STRIP_PARAMS):
+            kept = '&'.join(p for p in q.split('&')
+                            if p and p.split('=', 1)[0].strip().lower() not in LIVE_STRIP_PARAMS)
+            line = (head + '?' + kept) if kept else head
+            stripped += 1
+        out.extend(pending)
+        out.append(line)
+        pending = []
+    if pending:
+        out.extend(pending)
+    n = sum(dropped.values())
+    if n or stripped:
+        log("直播隐私清洗：剔除 %d 条账号绑定频道（占 %d 条的 %.1f%%），剥掉 %d 个冗余参数"
+            % (n, total, (100.0 * n / total) if total else 0.0, stripped))
+        for host, cnt in sorted(dropped.items(), key=lambda kv: -kv[1]):
+            log("    %s 剔除 %d 条" % (host, cnt))
+    return '\n'.join(out) + '\n'
+
+
+def scrub_files_in_place(paths):
+    """就地清洗已存在的 m3u 文件（上游拉不到、或历史文件里还留着凭据时用）。"""
+    for p in paths:
+        full = os.path.join(BASE_DIR, p)
+        if not os.path.exists(full):
+            continue
+        try:
+            with open(full, 'r', encoding='utf-8', errors='ignore') as f:
+                text = f.read()
+        except Exception as e:
+            log("  ⚠️ 读取 %s 失败，未做隐私清洗：%s" % (p, e))
+            continue
+        cleaned = scrub_live_privates(text)
+        if cleaned != text:
+            with open(full, 'w', encoding='utf-8') as f:
+                f.write(cleaned)
+            log("  %s 已就地清洗" % p)
+
+
 def refresh_live():
     """直播保鲜：拉取主列表 + 并入国外频道，更新本地列表后随下次 push 同步线上"""
     live_path = os.path.join(BASE_DIR, 'live_list.m3u')
@@ -1221,10 +1309,15 @@ def refresh_live():
     content = fetch(src, limit=LIVE_DOWNLOAD_LIMIT)
     if not (content and content.lstrip().startswith('#EXTM3U') and len(content) > 5000):
         log("直播列表更新失败，保留现有列表")
+        # 主列表拉不到时更要洗一遍：留着旧的带凭据文件继续推上去，等于今天照样泄露。
+        scrub_files_in_place((live_path, LIVE_LIGHT_PATH))
         return False
     merged = merge_extra_live(content)
     merged = prune_dead_overseas(merged)
     merged = reorder_groups(merged)
+    # 清洗必须在这一步：live_list 和由它派生的 live_light 都会带上游夹带的账号凭据，
+    # 而两个文件都会推到公开的 GitHub / Gitee，并被 jsDelivr 缓存扩散。
+    merged = scrub_live_privates(merged)
     old = None
     if os.path.exists(live_path):
         try:

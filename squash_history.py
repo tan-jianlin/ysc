@@ -2,7 +2,9 @@
 """把 Git 提交历史压缩成单条根提交，并同步强推 Gitee + GitHub。
 
 背景（2026-10-20）：
-    每天自动更新至少产生 1 条 "auto update" 提交，一年就是 730 条。
+    自动更新每天产生的提交比设想的多：update.yml 一轮就调两次 push_remotes()（各 1 条），
+    refresh_config.yml 再 1 条，本机当天还会再补 1—2 条。2026-11-04 实测一天 4 条，
+    一年约 1400 条，不是当初估的 730 条。
     提交历史本身不影响电视端（它只读最新 config），但仓库页面会被刷屏，
     而且仓库体积只增不减。这个脚本把历史合并成一个基线提交，
     内容一字不改，只把"过程记录"折掉。
@@ -10,6 +12,9 @@
 安全设计：
     - 执行前把 .git 完整复制到 ../.git-bak-<时间戳>，随时可以整体还原；
     - 先推 Gitee（国内必达），再推 GitHub；Gitee 失败就中止，不动 GitHub；
+    - GitHub 侧建树前先读远端文件清单，本机没有副本的文件按原 blob SHA 保留——
+      2026-11-04 发现远端清单取不到时直接中止，不再盲建一棵树；
+    - 压缩后逐路径比对远端文件集，少一个就返回失败并提示还原；
     - 全程只改 git 元数据，工作区文件不删除、不重写；
     - --dry-run 只打印计划，不做任何写操作。
 
@@ -64,8 +69,43 @@ def backup_git():
     return dst
 
 
-def gh_blobs_and_tree(files):
-    """把本地文件逐份写成 GitHub blob，再组装成一棵完整的树。"""
+def gh_remote_blobs():
+    """取 GitHub master 当前的文件清单 {path: {sha, mode}}。
+
+    必须取：本机工作区未必有远端全部文件。2026-11-04 发现
+    refresh_config.yml / refresh_config.py / source_pool.json 只存在于 GitHub
+    （由仓库内的工作流自己提交上去的），本机一份都没有。以前建树只用本机清单，
+    压缩历史会顺手把它们删掉——等于每天 01:00 那个源配置同步工作流永久消失。
+    """
+    ref = U._gh_api('GET', '/repos/%s/%s/git/ref/heads/%s'
+                    % (U.GH_OWNER, U.GH_REPO, U.GH_BRANCH))
+    if not ref or not (ref.get('object') or {}).get('sha'):
+        return {}
+    sha = ref['object']['sha']
+    commit = U._gh_api('GET', '/repos/%s/%s/git/commits/%s' % (U.GH_OWNER, U.GH_REPO, sha))
+    tree_sha = (commit or {}).get('tree', {}).get('sha')
+    if not tree_sha:
+        return {}
+    tree = U._gh_api('GET', '/repos/%s/%s/git/trees/%s?recursive=1'
+                     % (U.GH_OWNER, U.GH_REPO, tree_sha))
+    if not tree:
+        return {}
+    if tree.get('truncated'):
+        # 树被截断时清单不全，照它合并会漏文件；宁可不要保护，也不要基于残缺清单动手。
+        log('  ⚠️ 远端文件清单被截断，无法保证完整，跳过远端独有文件保护')
+        return {}
+    return {t['path']: {'sha': t['sha'], 'mode': t.get('mode', '100644')}
+            for t in (tree.get('tree') or []) if t.get('type') == 'blob'}
+
+
+def gh_blobs_and_tree(files, remote=None):
+    """把本地文件逐份写成 GitHub blob，再组装成一棵完整的树。
+
+    本地没有、但远端已有的文件按原 blob SHA 直接挂进新树（blob 对象本来就还在
+    仓库里，不需要重新上传），保证"压缩历史"只折提交、不删文件。
+    """
+    if remote is None:
+        remote = gh_remote_blobs()
     entries = []
     for rel, full in files:
         with open(full, 'rb') as f:
@@ -77,6 +117,13 @@ def gh_blobs_and_tree(files):
             raise RuntimeError('blob 创建失败：%s' % rel)
         entries.append({'path': rel.replace('\\', '/'), 'mode': '100644',
                         'type': 'blob', 'sha': data['sha']})
+    local_paths = {e['path'] for e in entries}
+    kept = sorted(p for p in remote if p not in local_paths)
+    for p in kept:
+        entries.append({'path': p, 'mode': remote[p]['mode'],
+                        'type': 'blob', 'sha': remote[p]['sha']})
+    if kept:
+        log('  保留远端独有文件 %d 个（本机没有副本）：%s' % (len(kept), '、'.join(kept)))
     tree = U._gh_api('POST', '/repos/%s/%s/git/trees' % (U.GH_OWNER, U.GH_REPO),
                      {'tree': entries})
     if not tree or not tree.get('sha'):
@@ -146,7 +193,7 @@ def main():
         log('  3) 删除旧 %s 分支，新分支改名 master' % branch)
         log('  4) reflog expire + gc 清掉不可达对象')
         log('  5) 强推 Gitee')
-        log('  6) GitHub：blobs → tree → 无父提交 → 强制移动 master 引用')
+        log('  6) GitHub：取远端文件清单 → blobs → tree（含远端独有文件）→ 无父提交 → 强制移动 master 引用')
         log('')
         log('新提交说明：')
         for line in msg.splitlines():
@@ -212,13 +259,30 @@ def main():
     log('  Gitee 已更新')
 
     step('6/6 重写 GitHub 历史')
+    remote_all = gh_remote_blobs()
+    remote_before = set(remote_all)
+    if not remote_all:
+        # 拿不到远端清单就没法保证不删东西。以前是照本机文件列表重建整棵树，
+        # 结果 refresh_config.yml / refresh_config.py / source_pool.json
+        # 这三个只存在于 GitHub 的文件被一并删掉，那条源配置同步工作流当场就没了。
+        # 现在宁可不改 GitHub，也不能盲建一棵树。
+        log('  ⚠️ 取不到 GitHub 现有文件清单，跳过 GitHub 重写（Gitee 已压缩，不影响播放）')
+        log('  → 可单独重跑：python squash_history.py --resume')
+        return 9
     rc, out, _ = git('ls-tree', '-r', '--name-only', 'HEAD')
     rels = [x for x in out.splitlines() if x.strip()]
     files = [(r, os.path.join(BASE, r.replace('/', os.sep))) for r in rels
              if os.path.exists(os.path.join(BASE, r.replace('/', os.sep)))]
+    missing = [r for r in rels
+               if not os.path.exists(os.path.join(BASE, r.replace('/', os.sep)))]
+    if missing:
+        # 索引里有、工作区没有 = 文件被删了却没提交。这类路径不会进新树，
+        # 必须显式告诉用户，否则"压缩历史"会顺手把远端的文件删掉。
+        log('  ⚠️ 本地索引有 %d 个文件在工作区不存在，将不会出现在新历史中：%s'
+            % (len(missing), '、'.join(missing)))
     log('  待上传 %d 个文件' % len(files))
     try:
-        tree_sha, n = gh_blobs_and_tree(files)
+        tree_sha, n = gh_blobs_and_tree(files, remote=remote_all)
         log('  tree %s（%d 项）' % (tree_sha[:8], n))
         commit = U._gh_api('POST', '/repos/%s/%s/git/commits' % (U.GH_OWNER, U.GH_REPO),
                            {'message': msg, 'tree': tree_sha, 'parents': []})
@@ -242,6 +306,19 @@ def main():
     log('  本地提交数：%s' % n_local)
     log('  GitHub 提交数：%s' % n_remote)
     log('  Gitee 提交数：需在网页确认（强推成功后即为 1）')
+    # 提交数只是过程指标，真正不能出问题的是文件集：压缩前后 GitHub 上的路径必须一模一样。
+    # 少了任何一个就说明合并逻辑漏了东西（历史上就是少了 refresh_config.yml 那三个文件）。
+    after = set(gh_remote_blobs())
+    lost = sorted(remote_before - after)
+    if lost:
+        log('  ❌ GitHub 压缩后文件丢失 %d 个：%s' % (len(lost), '、'.join(lost)))
+        log('     → 用备份的 .git 还原，或从 GitHub 旧提交里把文件取回来')
+        return 10
+    if not after:
+        log('  ⚠️ 校验时取不到 GitHub 文件清单，请手动确认远端文件齐全')
+        return 11
+    log('  GitHub 文件集校验：压缩前 %d 个 → 压缩后 %d 个，无丢失'
+        % (len(remote_before), len(after)))
     return 0
 
 
