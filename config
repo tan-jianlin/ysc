@@ -2,22 +2,6 @@
   "storeName": "本地聚合",
   "urls": [
     {
-      "name": "Lightconer聚合(每日自动更新)",
-      "url": "https://cdn.jsdelivr.net/gh/Lightconer/tvbox-ysc-config@main/output/%E5%8D%95%E4%BB%93%E8%81%9A%E5%90%88.json"
-    },
-    {
-      "name": "饭太硬多仓",
-      "url": "http://饭太硬.top/tv"
-    },
-    {
-      "name": "TVBox官方聚合",
-      "url": "https://raw.githubusercontent.com/TVboxorg/TVbox/main/dist/official.json"
-    },
-    {
-      "name": "巧儿影视",
-      "url": "https://cdn.qiaoji8.com/tvbox.json"
-    },
-    {
       "name": "小马源",
       "url": "https://szyyds.cn/tv/x.json"
     },
@@ -32,6 +16,10 @@
     {
       "name": "聚玩盒子4K",
       "url": "http://xhztv.top/4k.json"
+    },
+    {
+      "name": "影视仓com",
+      "url": "http://影视仓.com/"
     },
     {
       "name": "jsm大而全",
@@ -54,6 +42,10 @@
       "url": "http://szyyds.cn/tv/x.json"
     },
     {
+      "name": "潇洒",
+      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json"
+    },
+    {
       "name": "王二小备用",
       "url": "https://9280.kstore.space/wex.json"
     },
@@ -68,10 +60,6 @@
     {
       "name": "青龙",
       "url": "https://6758.kstore.space/1.json"
-    },
-    {
-      "name": "🚀高天流云",
-      "url": "https://gh-proxy.com/https://raw.githubusercontent.com/gaotianliuyun/gao/master/js.json"
     }
   ]
 }
