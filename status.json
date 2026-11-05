@@ -1,7 +1,7 @@
 {
   "https://szyyds.cn/tv/x.json": {
     "name": "小马源",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(站点抽查4/5) 搜索4/5",
@@ -12,16 +12,17 @@
   "https://api.hgyx.vip/hgyx.json": {
     "name": "HGYX影视",
     "last_ok": "2026-11-04",
-    "fail_days": 0,
-    "status": "ok",
-    "note": "单仓OK(宽松)(站点抽查4/5) 搜索2/5",
+    "fail_days": 1,
+    "status": "fail",
+    "note": "下载失败",
     "search": "2/5",
     "search_hit": 2,
-    "search_tried": 5
+    "search_tried": 5,
+    "last_fail_date": "2026-11-05"
   },
   "http://xhztv.top/4k.json": {
     "name": "聚玩盒子4K",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)(站点抽查3/5) 搜索2/5",
@@ -31,28 +32,28 @@
   },
   "https://9280.kstore.space/wex.json": {
     "name": "王二小备用",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK"
   },
   "https://6758.kstore.space/1.json": {
     "name": "青龙",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK(宽松)(站点抽查1/1)"
   },
   "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json": {
     "name": "电视直播",
-    "last_ok": "2026-11-05",
+    "last_ok": "2026-11-04",
     "fail_days": 0,
     "status": "ok",
-    "note": "直播OK | 境外频道 62% 可播(320/519)"
+    "note": "直播OK | 境外频道 10% 可播(54/517)"
   },
   "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json": {
     "name": "YSC全量源",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "4/5",
     "search_hit": 4,
@@ -62,14 +63,14 @@
   },
   "https://jihulab.com/ygbh1/box/-/raw/main/dcang/dc.json": {
     "name": "月光宝盒",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "多仓OK"
   },
   "http://ztha.top/TVBox/GYCK.json": {
     "name": "挺好分享",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "多仓OK"
@@ -97,14 +98,14 @@
   },
   "https://www.yingm.cc/dm/dm.json": {
     "name": "动漫专属",
-    "last_ok": "2026-10-29",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK"
   },
   "http://影视仓.com/": {
     "name": "影视仓com",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "1/1",
     "search_tried": 1,
@@ -121,7 +122,7 @@
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/jsm.json": {
     "name": "jsm大而全",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "3/5",
     "search_tried": 5,
@@ -138,7 +139,7 @@
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/qist/tvbox/master/xiaosa/api.json": {
     "name": "潇洒",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "status": "ok",
     "note": "单仓OK"
@@ -175,7 +176,7 @@
   },
   "https://gh-proxy.com/https://raw.githubusercontent.com/xmbjm/svip/refs/heads/main/svip.json": {
     "name": "SVIP📚在线",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "2/5",
     "search_tried": 5,
@@ -196,7 +197,7 @@
   },
   "https://clun.top/box.json": {
     "name": "Clun📚在线",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "3/5",
     "search_tried": 5,
@@ -206,7 +207,7 @@
   },
   "https://gh-proxy.com/raw.githubusercontent.com/yw88075/tvbox/main/yw.json": {
     "name": "心魔📚在线",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "2/5",
     "search_tried": 5,
@@ -216,7 +217,7 @@
   },
   "http://szyyds.cn/tv/x.json": {
     "name": "小马📚在线",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-05",
     "fail_days": 0,
     "search": "4/5",
     "search_tried": 5,

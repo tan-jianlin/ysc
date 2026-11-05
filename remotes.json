@@ -1,8 +1,8 @@
 {
-  "checked_at": "2026-11-05 04:47:01",
+  "checked_at": "2026-11-04 12:54:37",
   "remotes": {
-    "origin": "ok",
-    "gitee": "fail"
+    "gitee": "ok",
+    "github_api": "ok"
   },
   "note": "gitee=源码/配置备份（m3u 在 Gitee 会 451）；github_api=本机用 GitHub API 直写（git over HTTPS 在本机 443 全超时）"
 }
