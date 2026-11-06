@@ -46,10 +46,10 @@
   },
   "https://gitee.com/tan-jianlin/ysc/raw/master/live_source.json": {
     "name": "电视直播",
-    "last_ok": "2026-11-04",
+    "last_ok": "2026-11-06",
     "fail_days": 0,
     "status": "ok",
-    "note": "直播OK | 境外频道 10% 可播(54/517)"
+    "note": "直播OK | 境外频道 61% 可播(316/519)"
   },
   "https://jihulab.com/mengzhu2/ysc/-/raw/main/YSC.json": {
     "name": "YSC全量源",
